@@ -8,7 +8,6 @@ from __future__ import division
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import griddata
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 def gen_sinusoidal(N):
@@ -53,17 +52,12 @@ def smoothing(M, count):
     return phi,x
 
 def calculateError(w, valid_phi, valid_data_t, lamd):
-    #print valid_phi.shape
-    #print w.shape
-    #print valid_data_t.shape
     temp = np.dot(valid_phi,w.transpose()) - valid_data_t
     temp2 = np.dot(valid_phi,w.transpose()) - valid_data_t
     Ew = np.dot(np.transpose(temp),temp2)
-    #print Ew
     temp3 = np.dot((lamd/2),w)
     temp3 = np.dot(temp3,w.transpose())
     Ew = Ew + temp3
-    #print Ew
     return Ew
 
 def calculatePhi(valid_data, M):
@@ -113,45 +107,16 @@ def cross_validation(x, t, train_folds, valid_folds):
                #make the model based on training data
                
                w, phi = fit_polynomial_reg(train_data, train_data_t, M, lamd)
-               #smooth, xpol = smoothing(M, 100)
                valid_phi = calculatePhi(valid_data, M)
                error = calculateError(w, valid_phi, valid_data_t, lamd)
-               #error = np.mean(errors)
-               #error_fold = []
-               #error_fold.append(error)
-               #error_fold.append(M)
-               #error_fold.append(lamd)
                
-               #wtest, phitest = fit_polynomial_reg(valid_data, valid_data_t, M, lamd)
-               
-#               print valid_data, valid_data_t
-#               plt.plot(train_data, train_data_t, 'co')
-#               print
-#               minimize E(w) = 1/2(Phi*w - t).transpose()*(Phi*w - t) +(lamda/2)*w.transpose()*w
-#               print "phi.shape: " + str(phi.shape)
-#               print "w.shape: " + str(w.shape)
-#               print "train_t shape: " + str(train_data_t.shape)
-#               Ew = calculateError(w.transpose(), phi, train_data_t, lamd)
-#               curve = np.dot(phi,w.transpose())
-#               min_dist = calcError(curve, valid_data)
                errorS_fold.append(error) 
-               #plt.show()
-               #print "Ew.shape: " + str(Ew.shape)
-               '''
-               labelest = "M: "+str(M)+" lamda: "+str(lamd)
-               plt.plot(xpol,np.sin(xpol), 'green', label = "original")
-               plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = labelest)
-               plt.legend()
-               plt.show()
-               '''
-           #print errors_fold
-           #print calcMSE(errors_fold)
+               
            all_MSE_errors[M,l] = calcMSE(errorS_fold)
-           #element = [calcMSE(errorS_fold), M, l]
-           #all_MSE_errors.append(element)
+
     #plot_M_L_results(all_MSE_errors)
     bestM, bestL = findBestParameters(all_MSE_errors)
-    print "bestM: " + str(bestM)+ " bestL: " + str(bestL)
+    #print "bestM: " + str(bestM)+ " bestL: " + str(bestL)
     return bestM, bestL, all_MSE_errors
     #findBestParameters(all_MSE_errors)
     
@@ -160,59 +125,17 @@ def calcMSE(errorS_fold):
     return np.log(np.sqrt(np.mean(errorS_fold)))
 
 def findBestParameters(all_MSE_errors):
-    #print all_MSE_errors
-    #print sorted(all_MSE_errors.iterkeys(), key=lambda k: all_MSE_errors[k][1])
     bestfit = min(all_MSE_errors, key=all_MSE_errors.get)
-
-    #all_MSE_errors.sort(key = lambda x: x[0])
-    #print all_MSE_errors
-    #bestfit = all_MSE_errors[0]
     bestM = bestfit[0]
     bestL = bestfit[1]
     return bestM, bestL
     
 def plot_M_lamda_error(all_MSE_errors):
-    #print all_MSE_errors
-    #ax = fig.add_subplot(111, projection='3d')
-    #X = all_MSE_errors[]
     datapoints = []
     for item in all_MSE_errors.iteritems():
         datapoints.append((item[0][0],item[0][1],item[1]))
     #print datapoints
     x,y,z = zip(*datapoints)
-    #X = [] 
-    #Y = []
-    #Z = []
-    #print X
-    #print Y
-    #print Z
-    '''
-    for key in all_MSE_errors.keys():
-        if key[0] not in X:
-            X.append(key[0])
-        if key[1] not in Y:
-            Y.append(key[1])
-    X.sort();
-    Y.sort();
-    for M in X:
-        for lamd in Y:
-            Z.append(all_MSE_errors[(M,lamd)])
-    
-    for M in X:
-        for lamd in Y:
-            for error in Z:
-                print M,lamd,error 
-    print X
-    print Y
-    print Z
-    '''
-    #tuple(X)
-    #tuple(Y)
-    #tuple(Z)
-    #print X.shape
-    #print Y.shape
-    #print Z.shape
-    #X, Y, Z = axes3d.get_test_data(0.05)
     
     xi = np.linspace(min(x), max(x), 100)
     yi = np.linspace(min(y), max(y), 100)
@@ -220,34 +143,16 @@ def plot_M_lamda_error(all_MSE_errors):
     xim, yim = np.meshgrid(xi, yi)
     
     #zi = griddata(x, y, z, xi, yi)
-    fig = plt.figure()
+    fig = plt.figure("Error for different M and lamda")
 
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_surface(xim, yim, zi)
 
-    '''
-    plt.subplot(211)
-    plt.plot(x,z)
-    plt.subplot(212)
-    plt.plot(y,z)
-    '''
-    #ax = Axes3D(fig)
-    #ax.contour(xi, yi, zi)
-    #plt.contour(xi,yi,zi)
-    #X, Y = np.meshgrid(x, y)
-    #zs = np.array([x + 1/y for x,y in zip(np.ravel(X), np.ravel(Y))])
-    #Z = zs.reshape(X.shape)
-    #ax.plot_surface(X, Y, Z)
     
     ax.set_xlabel('M')
     ax.set_ylabel('lamda')
     ax.set_zlabel('Error')
     
-    #ax = fig.gca(projection='3d')
-    #ax.plot_trisurf(X, Y, Z, cmap=cm.jet, linewidth=0.2)
-    #ax.plot(X, Y, Z)
-    #ax.plot_trisurf(X, Y, Z)
-    #plt.show()    
 
 #generate data    
 x,t = gen_sinusoidal(9)
@@ -258,7 +163,7 @@ plotunregularized = 0
 
 if plotunregularized == 0:
     #for M = 0
-    plt.figure(1)
+    plt.figure("unregularized linear regression")
     plt.subplot(221)
     M = 0
     w,phi = fit_polynomial(x2, t2, M)
@@ -298,24 +203,26 @@ if plotunregularized == 0:
     plt.plot(x,t,'co')
     plt.plot(xpol,np.sin(xpol), 'green')
     plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue')
+    plt.legend()
     
 
 plotregularized = 0
 
 if plotregularized == 0:
     #define lamda
-    lamd = np.exp(-8)
+    lamd = np.exp(-5)
     #print lamd
     
     #regularized M = 0
-    plt.figure(2)
+    plt.figure("regularized linear regression with lamda exp(-5)")
     plt.subplot(221)
     M = 0
     w,phi = fit_polynomial_reg(x2, t2, M, lamd)
     smooth,xpol = smoothing(M, 100)
     plt.plot(x,t,'co')
-    plt.plot(xpol,np.sin(xpol), 'green', label = "orig")
-    plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = "estimated_reg")
+    plt.plot(xpol,np.sin(xpol), 'green', label = "original")
+    plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = "estimated")
+    plt.legend()
     
     #regularized M = 1
     plt.figure(2)
@@ -350,14 +257,15 @@ if plotregularized == 0:
 train_folds,valid_folds = kfold_indices(9, 9)
 bestM, bestL, all_MSE_errors = cross_validation(x, t, train_folds, valid_folds)
 
-plt.figure(3)
+plt.figure("best model according to cross-validation")
 #plt.subplot(224)
+labelML = "best M: " + str(bestM)+ " best lamda: " + str(bestL)
 M = bestM
 w,phi = fit_polynomial_reg(x, t, M, bestL)
 smooth,xpol = smoothing(M, 100)
 plt.plot(x,t,'co')
 plt.plot(xpol,np.sin(xpol), 'green', label="original")
-plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = "estimated")
+plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = labelML)
 plt.legend()
 
 plot_M_lamda_error(all_MSE_errors)
