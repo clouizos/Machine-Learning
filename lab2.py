@@ -5,10 +5,10 @@ Created on Wed Sep 11 11:06:46 2013
 @author: pathos
 """
 from __future__ import division
-import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.interpolate import griddata
+import numpy as np
 import matplotlib as mpl
-#import scipy as sp
 import matplotlib.pyplot as plt
 
 def gen_sinusoidal(N):
@@ -156,7 +156,8 @@ def cross_validation(x, t, train_folds, valid_folds):
     #findBestParameters(all_MSE_errors)
     
 def calcMSE(errorS_fold):
-    return np.mean(errorS_fold)
+    #return appropriate error so the visualization is clearer
+    return np.log(np.sqrt(np.mean(errorS_fold)))
 
 def findBestParameters(all_MSE_errors):
     #print all_MSE_errors
@@ -212,15 +213,36 @@ def plot_M_lamda_error(all_MSE_errors):
     #print Y.shape
     #print Z.shape
     #X, Y, Z = axes3d.get_test_data(0.05)
+    
+    xi = np.linspace(min(x), max(x), 100)
+    yi = np.linspace(min(y), max(y), 100)
+    zi = griddata((x, y), z, (xi[None,:], yi[:,None]), method='cubic')
+    xim, yim = np.meshgrid(xi, yi)
+    
+    #zi = griddata(x, y, z, xi, yi)
     fig = plt.figure()
+
     ax = fig.add_subplot(111, projection='3d')
-    X, Y = np.meshgrid(x, y)
-    zs = np.array([x**2 + y for x,y in zip(np.ravel(X), np.ravel(Y))])
-    Z = zs.reshape(X.shape)
-    ax.plot_surface(X, Y, Z)
+    ax.plot_surface(xim, yim, zi)
+
+    '''
+    plt.subplot(211)
+    plt.plot(x,z)
+    plt.subplot(212)
+    plt.plot(y,z)
+    '''
+    #ax = Axes3D(fig)
+    #ax.contour(xi, yi, zi)
+    #plt.contour(xi,yi,zi)
+    #X, Y = np.meshgrid(x, y)
+    #zs = np.array([x + 1/y for x,y in zip(np.ravel(X), np.ravel(Y))])
+    #Z = zs.reshape(X.shape)
+    #ax.plot_surface(X, Y, Z)
+    
     ax.set_xlabel('M')
     ax.set_ylabel('lamda')
     ax.set_zlabel('Error')
+    
     #ax = fig.gca(projection='3d')
     #ax.plot_trisurf(X, Y, Z, cmap=cm.jet, linewidth=0.2)
     #ax.plot(X, Y, Z)
