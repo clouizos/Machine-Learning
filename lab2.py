@@ -37,8 +37,9 @@ def fit_polynomial_reg(x, t, M, lamd):
     pinv = np.dot(lamd, np.identity(M+1))      
     pinv = pinv + np.dot(phi.transpose(), phi)
     pinv = np.linalg.inv(pinv)
-    w = np.dot(pinv, np.transpose(np.dot(phi.transpose(), t)))
-    return w.transpose(), phi
+    w = np.dot(pinv, phi.transpose())
+    w = np.dot(w,t)
+    return w, phi
 
 def smoothing(M, count):
     #print x.shape[0]
