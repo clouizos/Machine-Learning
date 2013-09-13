@@ -122,7 +122,7 @@ def cross_validation(x, t, train_folds, valid_folds):
     
 def calcMSE(errorS_fold):
     #return appropriate error so the visualization is clearer
-    return np.log(np.sqrt(np.mean(errorS_fold)))
+    return np.log(np.mean(errorS_fold))
 
 def findBestParameters(all_MSE_errors):
     bestfit = min(all_MSE_errors, key=all_MSE_errors.get)
