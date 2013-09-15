@@ -5,10 +5,13 @@ Created on Wed Sep 11 11:06:46 2013
 @author: pathos
 """
 from __future__ import division
-from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D, proj3d
+import pylab
 from scipy.interpolate import griddata
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 def gen_sinusoidal(N):
     x = np.linspace(0, 2*np.pi, N, endpoint=True)
@@ -131,8 +134,9 @@ def findBestParameters(all_MSE_errors):
     bestL = bestfit[1]
     return bestM, bestL
     
-def plot_M_lamda_error(all_MSE_errors):
+def plot_M_lamda_error(all_MSE_errors, bestM, bestL):
     datapoints = []
+    bestError = all_MSE_errors[bestM, bestL]
     for item in all_MSE_errors.iteritems():
         datapoints.append((item[0][0],item[0][1],item[1]))
     #print datapoints
@@ -143,16 +147,49 @@ def plot_M_lamda_error(all_MSE_errors):
     zi = griddata((x, y), z, (xi[None,:], yi[:,None]), method='cubic')
     xim, yim = np.meshgrid(xi, yi)
     
+    
+    #griddim = 0.1;    
+    bestxi = np.linspace(bestM, bestM, 1)
+    bestyi = np.linspace(bestL, bestL, 1)
+    #bestzi = np.linspace(bestError-griddim, bestError+griddim, 100)
+    #print bestzi
+    '''  
+    #bestzi = bestError
+    bestzi = griddata((bestM, bestL), bestError, 
+                      (bestxi[None,:], bestyi[:,None]), method='cubic')
+    bestxim, bestyim = np.meshgrid(bestxi, bestyi)
     #zi = griddata(x, y, z, xi, yi)
+    '''
     fig = plt.figure("Error for different M and lamda")
 
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(xim, yim, zi)
+    ax.plot_surface(xim, yim, zi, cmap = cm.coolwarm)
+    ax.plot(bestxi, bestyi, bestError, 'ro', label = 'minimum error')
+    text='[M:'+str(int(bestM))+', lamda:'+str(int(bestL))+', error:'+str("%.2f" % round(bestError,2))+']'  
+    x2, y2, _ = proj3d.proj_transform(bestM,bestL,bestError, ax.get_proj())
+    label = pylab.annotate(text,
+                       xycoords='data',
+                       xy = (x2, y2), xytext = (0, 0),
+                       textcoords = 'offset points', ha = 'right', va = 'bottom',
+                       bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))#,
+                       #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+    
+        
+    #pylab.annotate('local max', xy=(2, 1), xytext=(3, 1.5),
+    #        arrowprops=dict(facecolor='black', shrink=0.05),
+    #        )
+    #ax.plot(bestxiInv, bestyiInv, bestError)
+    #ax.plot_surface(bestxim, bestyim, bestzi, cmap = cm.coolwarm)
+    #arrayM = np.array(bestM)
+    #arrayL = np.array(bestL)
+    #ax.contour(bestxi, bestyi, bestzi, zdir = 'z', offset = -100, cmap = cm.coolwarm)
 
     
     ax.set_xlabel('M')
     ax.set_ylabel('lamda')
     ax.set_zlabel('Error')
+    ax.legend()
+    #plt.show()
     
 
 #generate data    
@@ -269,6 +306,6 @@ plt.plot(xpol,np.sin(xpol), 'green', label="original")
 plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = labelML)
 plt.legend()
 
-plot_M_lamda_error(all_MSE_errors)
+plot_M_lamda_error(all_MSE_errors, bestM, bestL)
 #show figure
 plt.show()
