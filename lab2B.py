@@ -10,15 +10,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def gen_sinusoidal2(N):
-    #x = np.linspace(0, 2*np.pi, N, endpoint=True)
     x = np.random.uniform(0,2*np.pi,N)
     mu, sigma = np.sin(x), 0.2
     t = np.random.normal(mu, sigma, N)
     return x,t
 
 def smoothing(M, count):
-    #print x.shape[0]
-    #x = np.random.uniform(0,2*np.pi,count)
     x = np.linspace(0, 2*np.pi,count, endpoint = True)
     phi = np.mat(np.zeros((x.shape[0],M+1)))
     for i in range(phi.shape[0]):
@@ -29,7 +26,7 @@ def smoothing(M, count):
     return phi,x
     
 def getPhi(x, M):
-    try:
+    try: #x not a scalar value
         phi = np.mat(np.zeros((x.shape[0],M+1)))
         for i in range(phi.shape[0]):
             for j in range(phi.shape[1]):
@@ -53,8 +50,6 @@ def fit_polynomial_bayes(x, t, M, alpha, beta):
     Sn = np.linalg.inv(aIden + betaPhi)
     mn = np.dot(np.dot(np.dot(beta, Sn), phi.transpose()), t)
     mn = mn.T
-    #print mn.shape
-    #print Sn.shape
     return mn, Sn
 
 def predict_polynomial_bayes(x, m, S, beta):
@@ -70,20 +65,15 @@ alpha = 1/2
 beta = 1/(0.2)**2
 M = 5
 phi = getPhi(x, M)
-#print "phi shape:"+str(phi.shape)
 mn, Sn = fit_polynomial_bayes(x, t, M, alpha, beta)
-#print density
-#prediction_points = 1
-#xforPred = np.linspace(0, 2*np.pi, prediction_points, endpoint = True)
+
 xPred = np.linspace(0,2*np.pi,100)
 predM = np.zeros(len(xPred))
 predS = np.zeros(len(xPred))
 for i in range(len(xPred)):
     predM[i], predS[i] = predict_polynomial_bayes(xPred[i], mn, Sn, beta)
-#print "predM"
-#print predM
-#print predS
-plt.figure(1)
+
+plt.figure("bayesian linear regression")
 plt.subplot(211)
 plt.plot(x,t, 'co')
 plt.plot(xPred, predM,'green', label = 'mean')
@@ -93,19 +83,18 @@ plt.fill_between(xPred,predM+np.sqrt(predS),predM-np.sqrt(predS),color = 'red',a
 plt.xlim([0,2*np.pi])
 plt.legend()
 
-#plt.figure(2)
 plt.subplot(212)
 arrayM = np.squeeze(np.array(mn))
 wPost = np.random.multivariate_normal(arrayM,Sn, 100)
 for i in range(len(wPost)):
     wPostSin = wPost[i]
-    #print wPostSin.shape
     W = wPostSin.reshape(1,6)
     smooth,xpol = smoothing(M, 100)
     if i == 1:
         plt.plot(xpol, np.dot(smooth, W.T),'r', label = 'polynomials')
     else:
         plt.plot(xpol, np.dot(smooth, W.T),'r')
+        
 plt.xlim([0,2*np.pi])
 plt.legend()
 

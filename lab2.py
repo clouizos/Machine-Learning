@@ -20,32 +20,51 @@ def gen_sinusoidal(N):
     return x,t
 
 def fit_polynomial(x, t, M):
-    phi = np.mat(np.zeros((x.shape[0],M+1)))
-    for i in range(phi.shape[0]):
-        for j in range(phi.shape[1]):
-            if j==0:
-                phi[i,j] = 1
-            phi[i,j] = np.power(x[i],j)
+    phi = getPhi(x, M)
     pinverse = np.linalg.pinv(phi)
     w = np.dot(pinverse, t)
     return w, phi
     
+def plot_unregularized(x, t, M_list):
+    plt.figure("unregularized linear regression")
+    for (M, i) in zip(M_list, range(len(M_list))):
+        subplot = 220 + i+1
+        plt.subplot(subplot)
+        w,phi = fit_polynomial(x, t, M)
+        smooth,xpol = smoothing(M, 100)
+        plt.plot(x,t,'co')
+        plt.plot(xpol,np.sin(xpol), 'green', label = "original")
+        label = "M:"+str(M)
+        plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = label)
+        plt.legend()
+    
 def fit_polynomial_reg(x, t, M, lamd):
-    phi = np.mat(np.zeros((x.shape[0],M+1)))
-    for i in range(phi.shape[0]):
-        for j in range(phi.shape[1]):
-            if j==0:
-                phi[i,j] = 1
-            phi[i,j] = np.power(x[i],j)
+    phi = getPhi(x, M)
     pinv = np.dot(lamd, np.identity(M+1))      
     pinv = pinv + np.dot(phi.transpose(), phi)
     pinv = np.linalg.inv(pinv)
     w = np.dot(pinv, phi.transpose())
     w = np.dot(w,t)
     return w, phi
+    
+def getPhi(x, M):
+    try: #x not a scalar value
+        phi = np.mat(np.zeros((x.shape[0],M+1)))
+        for i in range(phi.shape[0]):
+            for j in range(phi.shape[1]):
+                if j==0:
+                    phi[i,j] = 1
+                phi[i,j] = np.power(x[i],j)
+    except: #scalar value
+        phi = np.zeros(M+1)
+        phi = phi.T
+        for i in range(phi.shape[0]):
+            if i==0:
+                phi[i] = 1
+            phi[i] = np.power(x, i)
+    return phi
 
 def smoothing(M, count):
-    #print x.shape[0]
     x = np.linspace(0, 2*np.pi,count, endpoint = True)
     phi = np.mat(np.zeros((x.shape[0],M+1)))
     for i in range(phi.shape[0]):
@@ -62,15 +81,8 @@ def calculateError(w, valid_phi, valid_data_t, lamd):
     temp3 = np.dot((lamd/2),w)
     temp3 = np.dot(temp3,w.transpose())
     Ew = Ew + temp3
-    return Ew
-
-def calculatePhi(valid_data, M):
-    phi = np.mat(np.zeros((valid_data.shape[0],M+1)))
-    #print phi
-    for i in range(phi.shape[0]):
-        for j in range(phi.shape[1]):
-            phi[i, j] = np.power(valid_data[i], j)
-    return phi
+    return Ew.item(0)
+   
 
 def kfold_indices(N, k):
     all_indices = np.arange(N,dtype=int)
@@ -87,10 +99,10 @@ def kfold_indices(N, k):
 
 def cross_validation(x, t, train_folds, valid_folds):
     all_MSE_errors = {}
+
     #iterate over possible M and lamda
     for M in range(11):
         for l in range(10, -1, -1):
-           #print "M,l: "+ str((M,l))
            lamd = np.exp(-l)
            errorS_fold = []
            #get folds
@@ -100,33 +112,34 @@ def cross_validation(x, t, train_folds, valid_folds):
                train_data_t = np.zeros(train_fold.size)
                valid_data = np.zeros(valid_fold.size)
                valid_data_t = np.zeros(valid_fold.size)
+               
                #make training set
                for (i, index) in (zip(range(train_data.size), train_fold)):
                    train_data[i] = x[index]
                    train_data_t[i] = t[index]
+               
                #make test set
                for (i, index) in (zip(range(valid_data.size), valid_fold)):
                    valid_data[i] = x[index]
                    valid_data_t[i] = t[index]
+                   
                #make the model based on training data
-               
                w, phi = fit_polynomial_reg(train_data, train_data_t, M, lamd)
-               valid_phi = calculatePhi(valid_data, M)
+               valid_phi = getPhi(valid_data, M)
                error = calculateError(w, valid_phi, valid_data_t, lamd)
-               
+               #make the list with the errors for each fold
                errorS_fold.append(error) 
-               
+           
+           #append to the dictionary of errors the error for M,lamda 
            all_MSE_errors[M,l] = calcMSE(errorS_fold)
-
-    #plot_M_L_results(all_MSE_errors)
+    #find the best M and lamda
     bestM, bestL = findBestParameters(all_MSE_errors)
-    #print "bestM: " + str(bestM)+ " bestL: " + str(bestL)
+    
     return bestM, bestL, all_MSE_errors
-    #findBestParameters(all_MSE_errors)
     
 def calcMSE(errorS_fold):
     #return appropriate error so the visualization is clearer
-    return np.log(np.mean(errorS_fold))
+    return np.log(np.mean(errorS_fold,dtype=np.float64))
 
 def findBestParameters(all_MSE_errors):
     bestfit = min(all_MSE_errors, key=all_MSE_errors.get)
@@ -137,9 +150,10 @@ def findBestParameters(all_MSE_errors):
 def plot_M_lamda_error(all_MSE_errors, bestM, bestL):
     datapoints = []
     bestError = all_MSE_errors[bestM, bestL]
+    
     for item in all_MSE_errors.iteritems():
         datapoints.append((item[0][0],item[0][1],item[1]))
-    #print datapoints
+        
     x,y,z = zip(*datapoints)
     
     xi = np.linspace(min(x), max(x), 100)
@@ -147,19 +161,9 @@ def plot_M_lamda_error(all_MSE_errors, bestM, bestL):
     zi = griddata((x, y), z, (xi[None,:], yi[:,None]), method='cubic')
     xim, yim = np.meshgrid(xi, yi)
     
-    
-    #griddim = 0.1;    
     bestxi = np.linspace(bestM, bestM, 1)
     bestyi = np.linspace(bestL, bestL, 1)
-    #bestzi = np.linspace(bestError-griddim, bestError+griddim, 100)
-    #print bestzi
-    '''  
-    #bestzi = bestError
-    bestzi = griddata((bestM, bestL), bestError, 
-                      (bestxi[None,:], bestyi[:,None]), method='cubic')
-    bestxim, bestyim = np.meshgrid(bestxi, bestyi)
-    #zi = griddata(x, y, z, xi, yi)
-    '''
+
     fig = plt.figure("Error for different M and lamda")
 
     ax = fig.add_subplot(111, projection='3d')
@@ -167,95 +171,39 @@ def plot_M_lamda_error(all_MSE_errors, bestM, bestL):
     ax.plot(bestxi, bestyi, bestError, 'ro', label = 'minimum error')
     text='[M:'+str(int(bestM))+', lamda:'+str(int(bestL))+', error:'+str("%.2f" % round(bestError,2))+']'  
     x2, y2, _ = proj3d.proj_transform(bestM,bestL,bestError, ax.get_proj())
-    label = pylab.annotate(text,
+    pylab.annotate(text,
                        xycoords='data',
                        xy = (x2, y2), xytext = (0, 0),
                        textcoords = 'offset points', ha = 'right', va = 'bottom',
-                       bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))#,
-                       #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-    
-        
-    #pylab.annotate('local max', xy=(2, 1), xytext=(3, 1.5),
-    #        arrowprops=dict(facecolor='black', shrink=0.05),
-    #        )
-    #ax.plot(bestxiInv, bestyiInv, bestError)
-    #ax.plot_surface(bestxim, bestyim, bestzi, cmap = cm.coolwarm)
-    #arrayM = np.array(bestM)
-    #arrayL = np.array(bestL)
-    #ax.contour(bestxi, bestyi, bestzi, zdir = 'z', offset = -100, cmap = cm.coolwarm)
-
-    
+                       bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
     ax.set_xlabel('M')
     ax.set_ylabel('lamda')
     ax.set_zlabel('Error')
-    ax.legend()
-    #plt.show()
+    ax.view_init(5,-110)
+    ax.legend()    
     
-
 #generate data    
 x,t = gen_sinusoidal(9)
-x2 = x[0:9]
-t2 = t[0:9]
+M_list = (0,1,3,8)
+plot_unregularized(x, t, M_list)
 
-plotunregularized = 0
+train_folds,valid_folds = kfold_indices(len(x), 9)
+bestM, bestL, all_MSE_errors = cross_validation(x, t, train_folds, valid_folds)
+plot_M_lamda_error(all_MSE_errors, bestM, bestL)
 
-if plotunregularized == 0:
-    #for M = 0
-    plt.figure("unregularized linear regression")
-    plt.subplot(221)
-    M = 0
-    w,phi = fit_polynomial(x2, t2, M)
-    smooth,xpol = smoothing(M, 100)
-    plt.plot(x,t,'co')
-    plt.plot(xpol,np.sin(xpol), 'green', label = "original")
-    plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = "estimated")
-    plt.legend()
-    #plt.legend([p], ['original'])
-    
-    #for M = 1
-    plt.figure(1)
-    plt.subplot(222)
-    M = 1
-    w,phi = fit_polynomial(x2, t2, M)
-    smooth,xpol = smoothing(M, 100)
-    plt.plot(x,t,'co')
-    plt.plot(xpol,np.sin(xpol), 'green')
-    plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue')
-    
-    #for M = 3
-    plt.figure(1)
-    plt.subplot(223)
-    M = 3
-    w,phi = fit_polynomial(x2, t2, M)
-    smooth,xpol = smoothing(M, 100)
-    plt.plot(x,t,'co')
-    plt.plot(xpol,np.sin(xpol), 'green')
-    plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue')
-    
-    #for M = 9
-    plt.figure(1)
-    plt.subplot(224)
-    M = 9
-    w,phi = fit_polynomial(x2, t2, M)
-    smooth,xpol = smoothing(M, 100)
-    plt.plot(x,t,'co')
-    plt.plot(xpol,np.sin(xpol), 'green')
-    plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue')
-    plt.legend()
-    
-
+'''
 plotregularized = 0
 
 if plotregularized == 0:
     #define lamda
-    lamd = np.exp(-5)
+    lamd = bestL
     #print lamd
     
     #regularized M = 0
-    plt.figure("regularized linear regression with lamda exp(-5)")
+    plt.figure("regularized linear regression with lamda exp(-"+str(lamd)+")")
     plt.subplot(221)
     M = 0
-    w,phi = fit_polynomial_reg(x2, t2, M, lamd)
+    w,phi = fit_polynomial_reg(x, t, M, lamd)
     smooth,xpol = smoothing(M, 100)
     plt.plot(x,t,'co')
     plt.plot(xpol,np.sin(xpol), 'green', label = "original")
@@ -263,41 +211,38 @@ if plotregularized == 0:
     plt.legend()
     
     #regularized M = 1
-    plt.figure(2)
+    #plt.figure(2)
     plt.subplot(222)
     M = 1
-    w,phi = fit_polynomial_reg(x2, t2, M, lamd)
+    w,phi = fit_polynomial_reg(x, t, M, lamd)
     smooth,xpol = smoothing(M, 100)
     plt.plot(x,t,'co')
     plt.plot(xpol,np.sin(xpol), 'green')
     plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue')
     
     #regularized M = 3
-    plt.figure(2)
+    #plt.figure(2)
     plt.subplot(223)
-    M = 3
-    w,phi = fit_polynomial_reg(x2, t2, M, lamd)
+    M = 6
+    w,phi = fit_polynomial_reg(x, t, M, lamd)
     smooth,xpol = smoothing(M, 100)
     plt.plot(x,t,'co')
     plt.plot(xpol,np.sin(xpol), 'green')
     plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue')
     
     #regularized M = 9
-    plt.figure(2)
+    #plt.figure(2)
     plt.subplot(224)
-    M = 9
-    w,phi = fit_polynomial_reg(x2, t2, M, lamd)
+    M = 8
+    w,phi = fit_polynomial_reg(x, t, M, lamd)
     smooth,xpol = smoothing(M, 100)
     plt.plot(x,t,'co')
     plt.plot(xpol,np.sin(xpol), 'green')
     plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue')
-    
-train_folds,valid_folds = kfold_indices(9, 9)
-bestM, bestL, all_MSE_errors = cross_validation(x, t, train_folds, valid_folds)
+'''    
 
 plt.figure("best model according to cross-validation")
-#plt.subplot(224)
-labelML = "best M: " + str(bestM)+ " best lamda: " + str(bestL)
+labelML = "best M: " + str(bestM)+ " best lamda: exp(-" + str(bestL)+")"
 M = bestM
 w,phi = fit_polynomial_reg(x, t, M, bestL)
 smooth,xpol = smoothing(M, 100)
@@ -306,6 +251,5 @@ plt.plot(xpol,np.sin(xpol), 'green', label="original")
 plt.plot(xpol, np.dot(smooth, w.transpose()), 'blue', label = labelML)
 plt.legend()
 
-plot_M_lamda_error(all_MSE_errors, bestM, bestL)
 #show figure
 plt.show()
