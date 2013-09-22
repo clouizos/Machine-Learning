@@ -67,9 +67,11 @@ M = 5
 phi = getPhi(x, M)
 mn, Sn = fit_polynomial_bayes(x, t, M, alpha, beta)
 
+#get data points in order to find predictions
 xPred = np.linspace(0,2*np.pi,100)
 predM = np.zeros(len(xPred))
 predS = np.zeros(len(xPred))
+#get the predicted mean and variance for each point
 for i in range(len(xPred)):
     predM[i], predS[i] = predict_polynomial_bayes(xPred[i], mn, Sn, beta)
 

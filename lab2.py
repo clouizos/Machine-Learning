@@ -65,6 +65,10 @@ def getPhi(x, M):
     return phi
 
 def smoothing(M, count):
+    '''
+    function that creates a smoother plot since it creates a phi from more
+    data points
+    '''
     x = np.linspace(0, 2*np.pi,count, endpoint = True)
     phi = np.mat(np.zeros((x.shape[0],M+1)))
     for i in range(phi.shape[0]):
@@ -75,6 +79,7 @@ def smoothing(M, count):
     return phi,x
 
 def calculateError(w, valid_phi, valid_data_t, lamd):
+    #calculate the error of the regression
     temp = np.dot(valid_phi,w.transpose()) - valid_data_t
     temp2 = np.dot(valid_phi,w.transpose()) - valid_data_t
     Ew = np.dot(np.transpose(temp),temp2)
@@ -142,6 +147,7 @@ def calcMSE(errorS_fold):
     return np.log(np.mean(errorS_fold,dtype=np.float64))
 
 def findBestParameters(all_MSE_errors):
+    #find the best M and lambda according to the dictionary of the errors
     bestfit = min(all_MSE_errors, key=all_MSE_errors.get)
     bestM = bestfit[0]
     bestL = bestfit[1]
@@ -152,12 +158,16 @@ def plot_M_lamda_error(all_MSE_errors, bestM, bestL):
     bestError = all_MSE_errors[bestM, bestL]
     
     for item in all_MSE_errors.iteritems():
+        #create tuples of data points where x = M, y = lambda, z = error
         datapoints.append((item[0][0],item[0][1],item[1]))
-        
-    x,y,z = zip(*datapoints)
     
+    #create the vector of x,y,z    
+    x,y,z = zip(*datapoints)
+    #create a flat surface
     xi = np.linspace(min(x), max(x), 100)
     yi = np.linspace(min(y), max(y), 100)
+    # interpolate for missing values 
+    #and use zi as the height of the surface in specific points
     zi = griddata((x, y), z, (xi[None,:], yi[:,None]), method='cubic')
     xim, yim = np.meshgrid(xi, yi)
     
@@ -187,6 +197,7 @@ x,t = gen_sinusoidal(9)
 M_list = (0,1,3,8)
 plot_unregularized(x, t, M_list)
 
+#perform the cross validation and plot the best result and the error plot
 train_folds,valid_folds = kfold_indices(len(x), 9)
 bestM, bestL, all_MSE_errors = cross_validation(x, t, train_folds, valid_folds)
 plot_M_lamda_error(all_MSE_errors, bestM, bestL)
