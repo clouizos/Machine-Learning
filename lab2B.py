@@ -94,7 +94,7 @@ for i in range(len(wPost)):
         plt.plot(xpol, np.dot(smooth, W.T),'r', label = 'polynomials')
     else:
         plt.plot(xpol, np.dot(smooth, W.T),'r')
-        
+plt.plot(x,t, 'co')        
 plt.xlim([0,2*np.pi])
 plt.legend()
 
