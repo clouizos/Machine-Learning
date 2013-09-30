@@ -9,7 +9,7 @@ from random import shuffle
 from operator import itemgetter
 import numpy as np
 import matplotlib.pyplot as plt
-import gzip, cPickle
+import gzip, cPickle, shelve
 
 def load_mnist():
 	f = gzip.open('mnist.pkl.gz', 'rb')
@@ -151,6 +151,24 @@ def calc_hidden(x, v, a):
     for j in range(len(v)):
         h[j] = sigmoid(np.dot(v.T[j], x) + a[j])
     return h
+
+#save training parameters, time consuming to train every time    
+def save_params(params, location):
+    filename = location
+    my_shelf = shelve.open(filename,'n') # 'n' for new
+    try:
+        my_shelf['params']  = params 
+    except TypeError:
+        print('ERROR shelving')
+    my_shelf.close()
+
+def load_params(filename):
+    params = {}
+    my_shelf = shelve.open(filename)
+    for key in my_shelf:
+        params = my_shelf[key]
+        my_shelf.close()
+    return params
     
 #get data
 (x_train, t_train), (x_valid, t_valid), (x_test, t_test) = load_mnist()
@@ -161,7 +179,22 @@ classes = np.unique(t_train)
 w = np.zeros((x_train.shape[1], len(classes)))
 b = np.zeros(len(classes))
 
-w, b = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 5)
+'''
+decide if you want to train the model again 
+or choose the previous trained model
+'''
+train = 1
+params = {}
+location = '/home/pathos/UvA/MachineLearning/Homework/Lab3/shelved_params.data'
+if train == 1:
+    w, b = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 5)
+    params['w'] = w
+    params['b'] = b
+    save_params(params, location)
+else:
+    params = load_params(location)
+    w = params['w']
+    b = params['b']
 
 #print w.T[1]
 
