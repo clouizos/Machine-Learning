@@ -9,7 +9,8 @@ from random import shuffle
 from operator import itemgetter
 import numpy as np
 import matplotlib.pyplot as plt
-import gzip, cPickle, shelve
+import gzip, cPickle 
+#import shelve
 
 def load_mnist():
 	f = gzip.open('mnist.pkl.gz', 'rb')
@@ -34,48 +35,102 @@ def plot_digits(data, numcols, shape=(28,28)):
 def return_likelihood(x, t, w, b):
     logq, logp = np.zeros(b.shape[0]), np.zeros(b.shape[0])
     Z = 0 
-    try:# for all data points
-        #calculate logp and the normalization constant Z
-        for i in range(x.shape[0]):
+    #if x.shape[0] == 50000:# for all data points
+    #calculate logp and the normalization constant Z
+    #try:
+    #if x.shape[0] == 50000 or x.shape[0] == 10000:
+    #print np.dot(w.T,x.T).shape
+    b = np.array([b,]*x.shape[0]).T
+    #print b.shape
+    logq = np.dot(w.T,x.T)  + b
+    #print logq.shape
+    Z = np.sum(logq, axis=0)
+    Z = np.array([Z,]*b.shape[0])
+    #z = np.ones(b.shape[1])
+    #z = np.log(Z) * z 
+    logp = logq - Z
+    #print Z.shape
+    '''
+      for i in range(x.shape[0]):
             for j in range(len(logq)):
                 logq[j] = np.dot(w.T[j], x[i]) + b[j]
                 Z += np.exp(logq[j])
             #calculate normalized probabilities
             for j in range(len(logp)):
                 logp[j] = logq[j] - np.log(Z)
-    except:#for one data point
+    '''
+    '''
+    else:#for one data point
         for j in range(len(logq)):
             logq[j] = np.dot(w.T[j], x) + b[j]
             Z += np.exp(logq[j])
         for j in range(len(logp)):
             logp[j] = logq[j] - np.log(Z)
+    '''
+    
+    #print logp.shape
     return logp
         
 def logreg_gradient(x, t, w, b):
     #init
+    #print w.shape
     logq, logp, deltaq = np.zeros(b.shape[0]), np.zeros(b.shape[0]), np.zeros(b.shape[0])
+    #print "a"    
+    #print deltaq.shape    
     weights = np.zeros((x.shape[0], b.shape[0]))
     Z = 0 
     #calculate logp and the normalization constant Z
+    logq = np.dot(w.T, x) + b
+    '''
+    for j in range(len(logq)):
+        Z+= np.exp(logq[j])
+    '''
+    Z = np.sum(np.exp(logq))
+    '''
     for j in range(len(logq)):
         logq[j] = np.dot(w.T[j], x) + b[j]
         Z += np.exp(logq[j])
+    '''
     #calculate normalized probabilities
+    '''    
+    z = np.ones(b.shape[0])
+    z = np.log(Z) * z 
+    logp = logq - z
+    '''
+    '''
     for j in range(len(logp)):
         logp[j] = logq[j] - np.log(Z)
+    '''
     #calculate delta
+    deltaq[t] = 1 - ((1/Z)*np.exp(np.dot(w.T[t],x)+b[t]))
+    deltaq[0:t] = - ((1/Z)*np.exp(np.dot(w.T[0:t],x)+b[0:t]))
+    deltaq[t+1:len(deltaq)] = - ((1/Z)*np.exp(np.dot(w.T[t+1:len(deltaq)],x)+b[t+1:len(deltaq)]))
+    '''    
     for j in range(len(deltaq)):
         #if target class different delta
         if j == t:
             deltaq[j] = 1 - ((1/Z)*np.exp(np.dot(w.T[j],x)+b[j]))
         else:
             deltaq[j] = - ((1/Z)*np.exp(np.dot(w.T[j],x)+b[j]))
+    '''
     #calculate weight vector
+
+    x = np.array([x])
+    deltaq = np.array([deltaq])
+    weights = np.dot(deltaq.T, x).T
+    '''
     for i in range(weights.shape[0]):
         for j in range(weights.shape[1]):
            weights[i,j] = np.dot(deltaq[j], x[i])
+    '''
     #calculate bias vector
-    bias = deltaq
+    #bias = deltaq.reshape()
+    bias = np.squeeze(np.asarray(deltaq))
+    '''
+    print "bias shape"
+    print bias.shape
+    '''
+    #print weights.shape
     #print weights[1,1]
     return weights, bias
     
@@ -85,17 +140,29 @@ def sgd_iter(x_train, t_train, w, b):
     shuffle(index_shuf)
     #set learning rate
     a = 1*np.exp(-4)
-    cnt = -1
+    #cnt = -1
     #perform gradient ascent on all training data points
     for i in index_shuf:
-        cnt += 1
+        #cnt += 1
         gradw, gradb = logreg_gradient(x_train[i], t_train[i], w, b)
         #print w[1,1]
-        w = w + np.dot(a, gradw)
-        b = b + np.dot(a, gradb)
-        #break after cnt iterations
-        if cnt == 100:
+        '''
+        break1 = gradw[gradw>0.001]
+        break2 = gradb[gradb>0.001]
+        #break2 = [sublist for sublist in gradb if sublist[1] < 0.00001]
+        #print break1
+        if len(break1) == 0 & len(break2)== 0:
+            print "breaking iteration, lower than threshold"
             break
+        '''
+        #print "not yet"
+        #w_check = w + np.dot(a, gradw)
+        #b_check = b + np.dot(a, gradb)
+        w = w + a * gradw
+        b = b + a * gradb
+        #break after cnt iterations
+        #if cnt == 100:
+        #    break
     return w, b
     
 def validate(x_valid, t_valid, w, b, numval):
@@ -103,30 +170,53 @@ def validate(x_valid, t_valid, w, b, numval):
     #best, worst = np.zeros(8), np.zeros(8)
     validation = []
     #index = -1
+    '''
     for i in range(len(x_valid)):
         logp = return_likelihood(x_valid[i],t_valid[i],w,b)
         validation.append((logp[t_valid[i]], i)) 
+    '''
+    logp = return_likelihood(x_valid,t_valid,w,b)
+    #print logp.shape
+    for t in range(len(t_valid)):
+        validation.append((logp[t_valid[t],t], t))
+    #print validation[1]
+    #validation.extend((logp[: , t_valid[:]], t_valid[:])) 
+    #print validation[1]
     validation = sorted(validation,key=itemgetter(0))
-    #print validation
+    #print validation[1]
     return validation[len(validation)-numval:len(validation)], validation[0:numval] 
     
 def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, num_iter):
     #training, perform num_iter iterations 
     print "training..." 
     plt.figure("plot of conditional log-likelihood")
-    numrows = int(num_iter/2)
+    logp_t = []
+    logp_v = []
+    #numrows = int(num_iter/2)
     for i in range(num_iter):
         print "iteration: "+str(i+1)
         w, b = sgd_iter(x_train, t_train, w, b)
         logp_train = return_likelihood(x_train, t_train, w, b)
         logp_valid = return_likelihood(x_valid, t_valid, w, b)
-        plt_log_like(logp_train, logp_valid, i, numrows)
-    return w, b
+        '''        
+        #size of lop_train is (10,)
+        logp_train = np.sum(logp_train, axis= 1)
+        logp_valid = np.sum(logp_valid, axis= 1)
+        '''
+        logp_t.append(np.sum(logp_train))
+        logp_v.append(np.sum(logp_valid))
+        #print logp_train.shape
+        #print logp_valid.shape
+        #print "before plot"
+        #plt_log_like(logp_train, logp_valid, i, numrows)
+        #print "out of plot"
+    return w, b, logp_t, logp_v
 
 def train_mlp(x_train, t_train, w, b):
     return "you wish"
     
-def plt_log_like(logp_train, logp_valid, num_iter, numrows):
+def plt_log_like(logp_train, logp_valid ,num_iter, numrows):
+    print "inside plot"
     plt.subplot(numrows+1, 2, num_iter+1)
     plt.plot(logp_train, color = 'b', label = "training, "+str(num_iter+1))
     plt.plot(logp_valid, color = 'g', label = "validation, "+str(num_iter+1))
@@ -152,6 +242,7 @@ def calc_hidden(x, v, a):
         h[j] = sigmoid(np.dot(v.T[j], x) + a[j])
     return h
 
+'''
 #save training parameters, time consuming to train every time    
 def save_params(params, location):
     filename = location
@@ -169,6 +260,7 @@ def load_params(filename):
         params = my_shelf[key]
         my_shelf.close()
     return params
+'''
     
 #get data
 (x_train, t_train), (x_valid, t_valid), (x_test, t_test) = load_mnist()
@@ -183,11 +275,15 @@ b = np.zeros(len(classes))
 decide if you want to train the model again 
 or choose the previous trained model
 '''
-train = 1
-params = {}
-location = '/home/pathos/UvA/MachineLearning/Homework/Lab3/shelved_params.data'
+#train = 1
+#params = {}
+#location = '/home/pathos/UvA/MachineLearning/Homework/Lab3/shelved_params.data'
+'''
 if train == 1:
-    w, b = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 5)
+    w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 10)
+    plt.plot(logp_t, color = 'b', label = 'training')
+    plt.plot(logp_v, color = 'g', label = 'validation')  
+    plt.legend()
     params['w'] = w
     params['b'] = b
     save_params(params, location)
@@ -195,7 +291,11 @@ else:
     params = load_params(location)
     w = params['w']
     b = params['b']
-
+'''
+w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 10)
+plt.plot(logp_t, color = 'b', label = 'training')
+plt.plot(logp_v, color = 'g', label = 'validation')  
+plt.legend()
 #print w.T[1]
 
 #plot weights  
@@ -213,8 +313,6 @@ L = 10
 classes = np.unique(t_train)
 v = np.zeros((x_train.shape[1], L))
 a = np.zeros(L)
-
-
 
 plt.show()
 
