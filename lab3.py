@@ -41,11 +41,11 @@ def return_likelihood(x, t, w, b):
     #if x.shape[0] == 50000 or x.shape[0] == 10000:
     #print np.dot(w.T,x.T).shape
     b = np.array([b,]*x.shape[0]).T
+    #print b
     #print b.shape
     #x shape 50000x784
     #print w.T.shape,x.T.shape
     logq = np.dot(w.T,x.T)  + b
-    #print logq.shape
     Z = np.sum(np.exp(logq), axis=0)
     Z = np.array([Z,]*b.shape[0])
     #z = np.ones(b.shape[1])
@@ -81,7 +81,7 @@ def logreg_gradient(x, t, w, b):
     logq, logp, deltaq = np.zeros(b.shape[0]), np.zeros(b.shape[0]), np.zeros(b.shape[0])
     #print "a"    
     #print deltaq.shape    
-    weights = np.zeros((x.shape[0], b.shape[0]))
+    gradw = np.zeros((x.shape[0], b.shape[0]))
     Z = 0 
     #calculate logp and the normalization constant Z
     #x shape 784
@@ -113,6 +113,8 @@ def logreg_gradient(x, t, w, b):
     deltaq[0:t] = - ((1/Z)*np.exp(np.dot(w.T[0:t],x)+b[0:t]))
     #print deltaq[0:t]
     deltaq[t+1:len(deltaq)] = - ((1/Z)*np.exp(np.dot(w.T[t+1:len(deltaq)],x)+b[t+1:len(deltaq)]))
+#    print deltaq   
+#    print
     '''
     test = deltaq
     for j in range(len(deltaq)):
@@ -125,10 +127,15 @@ def logreg_gradient(x, t, w, b):
     #if (test==deltaq).all:
     #    print "yes"
     #calculate weight vector
-
+    #print x.shape
+    #print deltaq.shape
     x = np.array([x])
     deltaq = np.array([deltaq])
-    weights = np.dot(deltaq.T, x).T
+    #print x.shape
+    #print deltaq.shape
+    #print deltaq
+    gradw = np.dot(deltaq.T, x).T
+    #print np.unique(gradw)
     '''
     for i in range(weights.shape[0]):
         for j in range(weights.shape[1]):
@@ -136,14 +143,14 @@ def logreg_gradient(x, t, w, b):
     '''
     #calculate bias vector
     #bias = deltaq.reshape()
-    bias = np.squeeze(np.asarray(deltaq))
+    gradb = np.squeeze(np.asarray(deltaq))
     '''
     print "bias shape"
     print bias.shape
     '''
     #print weights.shape
     #print weights[1,1]
-    return weights, bias#, logp
+    return gradw, gradb#, logp
     
 def sgd_iter(x_train, t_train, w, b):
     #shuffle indices
@@ -152,12 +159,12 @@ def sgd_iter(x_train, t_train, w, b):
     #set learning rate
     a = 10**(-4)
     #print a
-    cnt = 0
+    #cnt = 0
     #cnt = -1
     #perform gradient ascent on all training data points
     #logp_train_bef = return_likelihood(x_train, t_train, w, b)
     for i in index_shuf:
-        cnt += 1
+        #cnt += 1
         gradw, gradb = logreg_gradient(x_train[i], t_train[i], w, b)
         #print w[1,1]
         '''
@@ -167,8 +174,9 @@ def sgd_iter(x_train, t_train, w, b):
         #print break1
         if len(break1) == 0 & len(break2)== 0:
             print "breaking iteration, lower than threshold"
-            break    print "x shape"
-    print x.shape
+            break    
+        print "x shape"
+        print x.shape
         '''
         #print "not yet"
         #w_check = w + np.dot(a, gradw)
@@ -204,7 +212,7 @@ def validate(x_valid, t_valid, w, b, numval):
     logp = return_likelihood(x_valid,t_valid,w,b)
     #print logp.shape
     for t in range(len(t_valid)):
-        print t_valid[t], t
+        #print t_valid[t], t
         validation.append((logp[t_valid[t],t], t))
     #print validation[1]
     #validation.extend((logp[: , t_valid[:]], t_valid[:])) 
@@ -223,6 +231,11 @@ def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, epochs):
     plt.figure("plot of conditional log-likelihood")
     logp_t = []
     logp_v = []
+    #init values
+#    logp_train = return_likelihood(x_train, t_train, w, b)
+#    logp_valid = return_likelihood(x_valid, t_valid, w, b)
+#    logp_t.append(np.mean(logp_train, dtype = np.float64))
+#    logp_v.append(np.mean(logp_valid, dtype = np.float64))
     #numrows = int(num_iter/2)
     for i in range(epochs):
         print "iteration: "+str(i+1)
@@ -324,7 +337,7 @@ else:
     w = params['w']
     b = params['b']
 '''
-w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 5)
+w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 1)
 plt.plot(logp_t, color = 'b', label = 'training')
 plt.plot(logp_v, color = 'g', label = 'validation') 
 #plt.ylim([0,1]) 
