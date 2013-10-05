@@ -33,28 +33,45 @@ def plot_digits(data, numcols, shape=(28,28)):
     #plt.show()
     
 def return_likelihood(x, t, w, b):
-    logq, logp = np.zeros(b.shape[0]), np.zeros(b.shape[0])
-    Z = 0 
-    #if x.shape[0] == 50000:# for all data points
-    #calculate logp and the normalization constant Z
-    #try:
-    #if x.shape[0] == 50000 or x.shape[0] == 10000:
-    #print np.dot(w.T,x.T).shape
-    b = np.array([b,]*x.shape[0]).T
-    #print b
-    #print b.shape
-    #x shape 50000x784
-    #print w.T.shape,x.T.shape
-    logq = np.dot(w.T,x.T)  + b
-    Z = np.sum(np.exp(logq), axis=0)
-    Z = np.array([Z,]*b.shape[0])
-    #z = np.ones(b.shape[1])
-    #z = np.log(Z) * z 
-    logp = logq - Z
-    #print logp
-    #logp = np.exp(logp)
-    #print Z.shape
-    '''
+   
+   logq, logp, deltaq = np.zeros(b.shape[0]), np.zeros(b.shape[0]), np.zeros(b.shape[0])
+   #print "a"    
+   #print deltaq.shape    
+   #gradw = np.zeros((x.shape[0], b.shape[0]))
+   #Z = 0 
+   #calculate logp and the normalization constant Z
+   #x shape 784
+   '''
+   for i in range(len(x)):
+       logq = np.dot(w.T, x[i]) + b
+       Z = np.sum(np.exp(logq))
+       logp += logq - np.log(Z)
+   '''
+   
+   logq, logp = np.zeros(b.shape[0]), np.zeros(b.shape[0])
+   #Z = 0 
+   #if x.shape[0] == 50000:# for all data points
+   #calculate logp and the normalization constant Z
+   #try:
+   #if x.shape[0] == 50000 or x.shape[0] == 10000:
+   #print np.dot(w.T,x.T).shape
+   b = np.array([b,]*x.shape[0]).T
+   #print b
+   #print b.shape
+   #x shape 50000x784
+   #print w.T.shape,x.T.shape
+   logq = np.dot(w.T,x.T)  + b
+   Z = np.sum(np.exp(logq), axis=0)
+   Z = np.array([Z,]*b.shape[0])
+   #z = np.ones(b.shape[1])
+   #z = np.log(Z) * z 
+   logp = logq - np.log(Z)
+   #print logp
+   
+   #print logp
+   #logp = np.exp(logp)
+   #print Z.shape
+   '''
       for i in range(x.shape[0]):
             for j in range(len(logq)):
                 logq[j] = np.dot(w.T[j], x[i]) + b[j]
@@ -62,18 +79,18 @@ def return_likelihood(x, t, w, b):
             #calculate normalized probabilities
             for j in range(len(logp)):
                 logp[j] = logq[j] - np.log(Z)
-    '''
-    '''
+   '''
+   '''
     else:#for one data point
         for j in range(len(logq)):
             logq[j] = np.dot(w.T[j], x) + b[j]
             Z += np.exp(logq[j])
         for j in range(len(logp)):
             logp[j] = logq[j] - np.log(Z)
-    '''
+   '''
     
-    #print logp.shape
-    return logp
+   #print logp.shape
+   return logp
         
 def logreg_gradient(x, t, w, b):
     #init
@@ -219,16 +236,16 @@ def validate(x_valid, t_valid, w, b, numval):
     #print validation[1]
     #sorts in ascending order so the last 8 have the greatest log likelihood
     validation = sorted(validation,key=itemgetter(0))
-    print validation[len(validation)-numval:len(validation)]
-    print 
-    print logp[:,validation[len(validation)-1][1]]
-    print logp[:,validation[0][1]]
+#    print validation[len(validation)-numval:len(validation)]
+#    print 
+#    print logp[:,validation[len(validation)-1][1]]
+#    print logp[:,validation[0][1]]
     return validation[len(validation)-numval:len(validation)], validation[0:numval] 
     
 def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, epochs):
     #training, perform num_iter iterations 
     print "training..." 
-    plt.figure("plot of conditional log-likelihood")
+    plt.figure("plot of conditional log-probability")
     logp_t = []
     logp_v = []
     #init values
@@ -248,8 +265,19 @@ def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, epochs):
         logp_valid = np.sum(logp_valid, axis= 1)
         '''
         #print logp_train.shape
-        logp_t.append(np.mean(logp_train, dtype = np.float64))
-        logp_v.append(np.mean(logp_valid, dtype = np.float64))
+#        print logp_train.shape
+#        train = 0
+#        valid = 0
+#        for i in range(logp_train.shape[1]):
+#            train += np.sum(logp_train[:,i])
+#        train = train * 1/logp_train.shape[1]
+#        logp_t.append(train)
+        logp_t.append(np.sum(logp_train))
+#        for i in range(logp_valid.shape[1]):
+#            valid += np.sum(logp_valid[:,i])
+#        valid = valid * 1/logp_valid.shape[1]
+#        logp_v.append(valid)
+        logp_v.append(np.sum(logp_valid))
         #print logp_train.shape
         #print logp_valid.shape
         #print "before plot"
@@ -337,7 +365,7 @@ else:
     w = params['w']
     b = params['b']
 '''
-w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 1)
+w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 3)
 plt.plot(logp_t, color = 'b', label = 'training')
 plt.plot(logp_v, color = 'g', label = 'validation') 
 #plt.ylim([0,1]) 
@@ -350,7 +378,7 @@ plot_digits(w.T, numcols=5)
 
 
 #validate and plot images with the best and worst 8 probabilities
-best, worst = validate(x_valid, t_valid, w, b, 16)
+best, worst = validate(x_valid, t_valid, w, b, 8)
 #print best
 plot_res_reg(best, worst)
 
