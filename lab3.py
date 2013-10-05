@@ -42,13 +42,17 @@ def return_likelihood(x, t, w, b):
     #print np.dot(w.T,x.T).shape
     b = np.array([b,]*x.shape[0]).T
     #print b.shape
+    #x shape 50000x784
+    #print w.T.shape,x.T.shape
     logq = np.dot(w.T,x.T)  + b
     #print logq.shape
-    Z = np.sum(logq, axis=0)
+    Z = np.sum(np.exp(logq), axis=0)
     Z = np.array([Z,]*b.shape[0])
     #z = np.ones(b.shape[1])
     #z = np.log(Z) * z 
     logp = logq - Z
+    #print logp
+    #logp = np.exp(logp)
     #print Z.shape
     '''
       for i in range(x.shape[0]):
@@ -80,12 +84,14 @@ def logreg_gradient(x, t, w, b):
     weights = np.zeros((x.shape[0], b.shape[0]))
     Z = 0 
     #calculate logp and the normalization constant Z
+    #x shape 784
     logq = np.dot(w.T, x) + b
     '''
     for j in range(len(logq)):
         Z+= np.exp(logq[j])
     '''
     Z = np.sum(np.exp(logq))
+    #logp = logq - np.log(Z)
     '''
     for j in range(len(logq)):
         logq[j] = np.dot(w.T[j], x) + b[j]
@@ -103,9 +109,12 @@ def logreg_gradient(x, t, w, b):
     '''
     #calculate delta
     deltaq[t] = 1 - ((1/Z)*np.exp(np.dot(w.T[t],x)+b[t]))
+    #print deltaq[0:t]
     deltaq[0:t] = - ((1/Z)*np.exp(np.dot(w.T[0:t],x)+b[0:t]))
+    #print deltaq[0:t]
     deltaq[t+1:len(deltaq)] = - ((1/Z)*np.exp(np.dot(w.T[t+1:len(deltaq)],x)+b[t+1:len(deltaq)]))
-    '''    
+    '''
+    test = deltaq
     for j in range(len(deltaq)):
         #if target class different delta
         if j == t:
@@ -113,6 +122,8 @@ def logreg_gradient(x, t, w, b):
         else:
             deltaq[j] = - ((1/Z)*np.exp(np.dot(w.T[j],x)+b[j]))
     '''
+    #if (test==deltaq).all:
+    #    print "yes"
     #calculate weight vector
 
     x = np.array([x])
@@ -132,18 +143,21 @@ def logreg_gradient(x, t, w, b):
     '''
     #print weights.shape
     #print weights[1,1]
-    return weights, bias
+    return weights, bias#, logp
     
 def sgd_iter(x_train, t_train, w, b):
     #shuffle indices
     index_shuf = range(len(x_train))
     shuffle(index_shuf)
     #set learning rate
-    a = 1*np.exp(-4)
+    a = 10**(-4)
+    #print a
+    cnt = 0
     #cnt = -1
     #perform gradient ascent on all training data points
+    #logp_train_bef = return_likelihood(x_train, t_train, w, b)
     for i in index_shuf:
-        #cnt += 1
+        cnt += 1
         gradw, gradb = logreg_gradient(x_train[i], t_train[i], w, b)
         #print w[1,1]
         '''
@@ -153,15 +167,27 @@ def sgd_iter(x_train, t_train, w, b):
         #print break1
         if len(break1) == 0 & len(break2)== 0:
             print "breaking iteration, lower than threshold"
-            break
+            break    print "x shape"
+    print x.shape
         '''
         #print "not yet"
         #w_check = w + np.dot(a, gradw)
         #b_check = b + np.dot(a, gradb)
         w = w + a * gradw
         b = b + a * gradb
+        #logp_train_aft = return_likelihood(x_train, t_train, w, b)
+        '''
+        if cnt == 1:
+            logp_train_bef = logp
+        elif np.allclose(logp, logp_train_bef, rtol = 0.1, atol = 0.001):
+            #(np.abs(logp - logp_train_bef) < 0.1).all():
+            print "threshold. breaking after processing "+str(cnt)+" datapoints..."
+            break
+        else:
+            logp_train_bef = logp
+        '''
         #break after cnt iterations
-        #if cnt == 100:
+        #if cnt == 1000:
         #    break
     return w, b
     
@@ -178,22 +204,27 @@ def validate(x_valid, t_valid, w, b, numval):
     logp = return_likelihood(x_valid,t_valid,w,b)
     #print logp.shape
     for t in range(len(t_valid)):
+        print t_valid[t], t
         validation.append((logp[t_valid[t],t], t))
     #print validation[1]
     #validation.extend((logp[: , t_valid[:]], t_valid[:])) 
     #print validation[1]
+    #sorts in ascending order so the last 8 have the greatest log likelihood
     validation = sorted(validation,key=itemgetter(0))
-    #print validation[1]
+    print validation[len(validation)-numval:len(validation)]
+    print 
+    print logp[:,validation[len(validation)-1][1]]
+    print logp[:,validation[0][1]]
     return validation[len(validation)-numval:len(validation)], validation[0:numval] 
     
-def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, num_iter):
+def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, epochs):
     #training, perform num_iter iterations 
     print "training..." 
     plt.figure("plot of conditional log-likelihood")
     logp_t = []
     logp_v = []
     #numrows = int(num_iter/2)
-    for i in range(num_iter):
+    for i in range(epochs):
         print "iteration: "+str(i+1)
         w, b = sgd_iter(x_train, t_train, w, b)
         logp_train = return_likelihood(x_train, t_train, w, b)
@@ -203,8 +234,9 @@ def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, num_iter):
         logp_train = np.sum(logp_train, axis= 1)
         logp_valid = np.sum(logp_valid, axis= 1)
         '''
-        logp_t.append(np.sum(logp_train))
-        logp_v.append(np.sum(logp_valid))
+        #print logp_train.shape
+        logp_t.append(np.mean(logp_train, dtype = np.float64))
+        logp_v.append(np.mean(logp_valid, dtype = np.float64))
         #print logp_train.shape
         #print logp_valid.shape
         #print "before plot"
@@ -292,9 +324,10 @@ else:
     w = params['w']
     b = params['b']
 '''
-w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 10)
+w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 5)
 plt.plot(logp_t, color = 'b', label = 'training')
-plt.plot(logp_v, color = 'g', label = 'validation')  
+plt.plot(logp_v, color = 'g', label = 'validation') 
+#plt.ylim([0,1]) 
 plt.legend()
 #print w.T[1]
 
@@ -304,7 +337,7 @@ plot_digits(w.T, numcols=5)
 
 
 #validate and plot images with the best and worst 8 probabilities
-best, worst = validate(x_valid, t_valid, w, b, 8)
+best, worst = validate(x_valid, t_valid, w, b, 16)
 #print best
 plot_res_reg(best, worst)
 
