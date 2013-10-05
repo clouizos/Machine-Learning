@@ -248,6 +248,7 @@ def train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, epochs):
     plt.figure("plot of conditional log-probability")
     logp_t = []
     logp_v = []
+
     #init values
 #    logp_train = return_likelihood(x_train, t_train, w, b)
 #    logp_valid = return_likelihood(x_valid, t_valid, w, b)
@@ -368,6 +369,7 @@ else:
 w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 3)
 plt.plot(logp_t, color = 'b', label = 'training')
 plt.plot(logp_v, color = 'g', label = 'validation') 
+print logp_t
 #plt.ylim([0,1]) 
 plt.legend()
 #print w.T[1]
