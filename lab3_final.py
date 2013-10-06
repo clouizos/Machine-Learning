@@ -29,13 +29,16 @@ def plot_digits(data, numcols, shape=(28,28)):
 def return_likelihood(x, t, w, b):
    #return the normalized log probability of all datapoints in a dataset
    logq, logp = np.zeros(b.shape[0]), np.zeros(b.shape[0])
+   logp_true = np.zeros(t.shape[0])
    b = np.array([b,]*x.shape[0]).T
    logq = np.dot(w.T,x.T)  + b
    Z = np.sum(np.exp(logq), axis=0)
    Z = np.array([Z,]*b.shape[0])
    logp = logq - np.log(Z)
-   
-   return logp
+   #return only for true class labels
+   for i in range(len(t)):
+       logp_true[i] = logp[t[i],i] 
+   return logp_true
         
 def logreg_gradient(x, t, w, b):
     logq, logp, deltaq = np.zeros(b.shape[0]), np.zeros(b.shape[0]), np.zeros(b.shape[0]) 
@@ -77,9 +80,8 @@ def validate(x_valid, t_valid, w, b, numval):
     print "model built. validating..."
     validation = []
     logp = return_likelihood(x_valid,t_valid,w,b)
-    
     for t in range(len(t_valid)):
-        validation.append((logp[t_valid[t],t], t))
+        validation.append((logp[t], t))
         
     #sorts in ascending order so the last 8 have the greatest log likelihood
     validation = sorted(validation,key=itemgetter(0))
@@ -132,7 +134,7 @@ b = np.zeros(len(classes))
 
 #uncomment below for multiclass logistic regression
 '''
-w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 5)
+w, b, logp_t, logp_v = train_mult_log_reg(x_train, t_train, x_valid, t_valid, w, b, 2)
 plt.plot(logp_t, color = 'b', label = 'training')
 plt.plot(logp_v, color = 'g', label = 'validation') 
 plt.legend()
@@ -172,12 +174,10 @@ def train_mlp(x_train, t_train, x_valid, t_valid, w, b, v, a, epochs):
         w, b, v, a = sgd_iter_mlp(x_train, t_train, w, b, v, a)
         #uncomment below for using validation set as well for training
         #w, b, v, a = sgd_iter_mlp(x_valid, t_valid, w, b, v, a)
-        print "one full gradient descent"
         logp_train = return_likelihood_mlp(x_train, t_train, w, b, v, a)
         logp_valid = return_likelihood_mlp(x_valid, t_valid, w, b, v, a)
-        print "found log likelihoods"
+        
         logp_t.append(np.mean(logp_train))
-
         logp_v.append(np.mean(logp_valid))
 
     return w, b, v, a, logp_t, logp_v
@@ -249,7 +249,7 @@ def gradient_mlp(x, t, w, b, v, a):
 def return_likelihood_mlp(x, t, w, b, v, a):
    #return conditional log probability of all datapoints in the dataset
    logq, logp = np.zeros(b.shape[0]), np.zeros(b.shape[0])  
-   
+   logp_true = np.zeros(t.shape[0])
    b = np.array([b,]*x.shape[0]).T
    a = np.array([a,]*x.shape[0]).T
    h = calc_hidden(x.T, v, a)
@@ -260,14 +260,16 @@ def return_likelihood_mlp(x, t, w, b, v, a):
    
    logp = logq - np.log(Z)
    
-   return logp
+   for i in range(len(t)):
+       logp_true[i] = logp[t[i],i] 
+   return logp_true
    
 def validate_mlp(x_valid, t_valid, w, b, v, a, numval):
     print "model built. validating..."
     validation = []
     logp = return_likelihood_mlp(x_valid,t_valid,w,b,v,a)
     for t in range(len(t_valid)):
-        validation.append((logp[t_valid[t],t], t))
+        validation.append((logp[t], t))
 
     validation = sorted(validation,key=itemgetter(0))
 
@@ -275,7 +277,7 @@ def validate_mlp(x_valid, t_valid, w, b, v, a, numval):
 
 #uncomment for multilayer perceptron
 
-w, b, v, a, logp_t, logp_v = train_mlp(x_train, t_train, x_valid, t_valid, w, b, v, a, 10)
+w, b, v, a, logp_t, logp_v = train_mlp(x_train, t_train, x_valid, t_valid, w, b, v, a, 4)
 plt.plot(logp_t, color = 'b', label = 'training')
 plt.plot(logp_v, color = 'g', label = 'validation') 
 plt.legend()
