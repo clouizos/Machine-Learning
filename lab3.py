@@ -416,6 +416,8 @@ def sgd_iter_mlp(x_train, t_train, w, b, v, a):
         w = w + lr * gradw
         b = b + lr * gradb
         v = v + lr * gradv
+        #print "sgd"
+        #print a.shape, grada.shape
         a = a + lr * grada
         
     return w, b, v, a
@@ -425,6 +427,8 @@ def sigmoid(a):
     
 def calc_hidden(x, v, a):
     #h = np.zeros(v.shape[1])
+#    print "hidden"
+#    print x.shape, v.shape, a.shape
     h = sigmoid(np.dot(v.T, x) + a)
 #    print "ha"
 #    print h.shape
@@ -437,24 +441,24 @@ def calc_hidden(x, v, a):
     #return np.asarray([h]).T
 
 def logreg_gradient_mlp(x, t, w, b, v, a):
-    print "once"
+#    print "once"
     #init
     logq, logp, deltaq = np.zeros(b.shape[0]), np.zeros(b.shape[0]), np.zeros(b.shape[0])
     deltah = np.zeros(v.shape[1])     
     gradw = np.zeros((x.shape[0], b.shape[0]))
     gradv = np.zeros(v.shape)
-    print v.shape
+#    print v.shape
     grada = np.zeros(a.shape[0])
     #Z = 0 
     #calculate logp and the normalization constant Z
     #x shape 784
     h = calc_hidden(x, v, a).T
-    print "aaaaa"
-    print h.shape
+#    print "aaaaa"
+#    print h.shape
     
     logq = np.dot(w.T, h) + b
-    print logq.shape
-    print 'bbb'
+#    print logq.shape
+#    print 'bbb'
     Z = np.sum(np.exp(logq))
     #print deltaq.shape
     #calculate deltas
@@ -465,7 +469,7 @@ def logreg_gradient_mlp(x, t, w, b, v, a):
     h = np.array([h]).T
     #h = np.asarray([h])
     #print  w.T.shape, h.shape, deltaq.shape
-    print deltaq.shape, w.shape
+#    print deltaq.shape, w.shape
     #deltah = np.dot(np.dot(w.T,h),deltaq)
     deltah = np.dot(deltaq,w.T)
     '''
@@ -482,14 +486,14 @@ def logreg_gradient_mlp(x, t, w, b, v, a):
     #deltah = np.array([deltah])
     
     #calculate derivatives according to a single datapoint
-    print deltaq.shape, h.shape
+#    print deltaq.shape, h.shape
     gradw = np.dot(h,deltaq)
-    print gradw.shape
+#    print gradw.shape
     gradb = np.squeeze(np.asarray(deltaq))
-    print gradb.shape
+#    print gradb.shape
     #print np.dot(deltaq.T, deltah)
     #print 1- np.dot(h.T , x)
-    print "begin"
+#    print "begin"
     #print deltaq.shape, deltah.shape, h.shape, x.shape, np.dot(h, x).shape 
     #print np.dot(deltaq.T,deltah.T).shape, np.dot(h, x).shape 
     I = np.matrix(np.identity(v.shape[1]))
@@ -502,10 +506,11 @@ def logreg_gradient_mlp(x, t, w, b, v, a):
     gradv = np.dot(v, np.diag(np.squeeze(np.asarray(diagonal))))    
     # V x diag(delta sigma^T I sigma)
     #gradv = np.dot(np.dot(deltaq, deltah), 1- np.dot(h.T , x))
-    print gradv.shape
+#    print gradv.shape
     #grada = np.dot(np.dot(deltaq.T, deltah).T,1- h.T)
-    print deltah.shape, h.T.shape,(1-h).shape
+#    print deltah.shape, h.T.shape,(1-h).shape
     grada = np.dot(np.dot(deltah.T,h.T),1-h)
+    grada = np.squeeze(np.asarray(grada))
     return gradw, gradb, gradv, grada
     
 def return_likelihood_mlp(x, t, w, b, v, a):
