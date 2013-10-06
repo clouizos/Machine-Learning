@@ -160,7 +160,8 @@ def logreg_gradient(x, t, w, b):
     '''
     #calculate bias vector
     #bias = deltaq.reshape()
-    gradb = np.squeeze(np.asarray(deltaq))
+    gradb = np.reshape(deltaq,-1)
+    #gradb = np.squeeze(np.asarray(deltaq))
     '''
     print "bias shape"
     print bias.shape
@@ -378,7 +379,7 @@ plot_res_reg(best, worst)
 '''
 
 #units in hidden layer for mlp
-L = 200
+L = 10
 v = np.asarray(np.random.uniform(-np.sqrt(6. / (x_train.shape[1] + L)),np.sqrt(6. / (x_train.shape[1] + L)),(x_train.shape[1], L)))
 #v = np.random.randn(x.shape[1], L)
 a = np.zeros(L)
@@ -394,10 +395,11 @@ def train_mlp(x_train, t_train, w, b, v, a, epochs):
 
     for i in range(epochs):
         print "iteration: "+str(i+1)
-        w, b = sgd_iter_mlp(x_train, t_train, w, b, v, a)
+        w, b, v, a = sgd_iter_mlp(x_train, t_train, w, b, v, a)
+        print "one full gradient descent"
         logp_train = return_likelihood_mlp(x_train, t_train, w, b, v, a)
         logp_valid = return_likelihood_mlp(x_valid, t_valid, w, b, v, a)
-        
+        print "found log likelihoods"
         logp_t.append(np.mean(logp_train))
 
         logp_v.append(np.mean(logp_valid))
@@ -489,7 +491,10 @@ def logreg_gradient_mlp(x, t, w, b, v, a):
 #    print deltaq.shape, h.shape
     gradw = np.dot(h,deltaq)
 #    print gradw.shape
-    gradb = np.squeeze(np.asarray(deltaq))
+    #gradb = np.squeeze(np.asarray(deltaq))
+    #print deltaq.shape
+    gradb = np.reshape(deltaq,-1)
+    #print gradb.shape
 #    print gradb.shape
     #print np.dot(deltaq.T, deltah)
     #print 1- np.dot(h.T , x)
@@ -510,7 +515,8 @@ def logreg_gradient_mlp(x, t, w, b, v, a):
     #grada = np.dot(np.dot(deltaq.T, deltah).T,1- h.T)
 #    print deltah.shape, h.T.shape,(1-h).shape
     grada = np.dot(np.dot(deltah.T,h.T),1-h)
-    grada = np.squeeze(np.asarray(grada))
+    #grada = np.squeeze(np.asarray(grada))
+    grada = np.reshape(grada,-1)
     return gradw, gradb, gradv, grada
     
 def return_likelihood_mlp(x, t, w, b, v, a):
