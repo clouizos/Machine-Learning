@@ -49,7 +49,7 @@ def computeK( X1, X2, thetas ):
 #thetas = (np.array([1.00,4.00,0.00,0.00]),np.array([9.00,4.00,0.00,0.00]),np.array([1.00,64.00,0.00,0.00]),
           #np.array([1,00,0.25,0.00,0.00]),np.array([1.00,4.00,10.00,0.00]),np.array([1.00,4.00,0.00,5.00]))
 thetas = ([1.00,4.00,0.00,0.00],[9.00,4.00,0.00,0.00],[1.00,64.00,0.00,0.00],
-          [1.00,0.25,0.00,0.00],[1.00,4.00,10.00,0.00],[1.00,4.00,0.00,5.00])
+          [1.00,0.25,0.00,0.00],[1.00,4.00,10.00,0.0],[1.00,4.00,0.00,5.00])
 
 plt.figure("samples from the Gaussian process prior")
 for i in range(len(thetas)):
@@ -66,6 +66,9 @@ for i in range(len(thetas)):
     plt.plot(x_test,y_i4,'orange')
     plt.plot(x_test,y_i5,'black')
     plt.plot(x_test,mu_test,'r--',label = 'true mean')
+    #print(mu_test+2*np.sqrt(K.diagonal())).shape
+    #print mu_test+2*np.sqrt(K.diagonal())
+    #print K.diagonal()
     plt.fill_between(x_test,mu_test+2*np.sqrt(np.diag(K)),mu_test-2*np.sqrt(np.diag(K)),color = 'red',alpha=0.1)
     plt.xlim(-1,1)    
     plt.legend(loc = 2, prop = {'size': 6}) 
@@ -82,21 +85,27 @@ def computeC(K, beta):
                 C[i,j] = K[i,j]
     return C
     
-def computec(xn, xm, theta, beta):
+def computec(x_test, theta, beta):
     '''
     c = np.zeros((K.shape))
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             c[i,j] = K[i,j] + (1/beta)
     '''
-    return k_n_m(xn, xm, theta) + (1/beta)
+    c = np.zeros(x_test.shape[0])
+    for i in range(x_test.shape[0]):
+        c[i] = k_n_m(x_test[i], x_test[i], theta) + (1/beta)
+    return c
+    #return k_n_m(xn, xm, theta) + (1/beta)
     
-def computek(x_train, x, theta):
-    k = np.zeros(x_train.shape[0])
+def computek(x_train, x_test, theta):
+    k = np.zeros((x_train.shape[0],x_test.shape[0]))
     #K = np.zeros((X1.shape[0],len(X2)))
-    for i in range(k.shape[0]):
-        k[i] = k_n_m(x_train[i],x,theta)
-    return np.reshape(k, (k.shape[0],-1))
+    for j in range(x_test.shape[0]):
+        for i in range(x_train.shape[0]):
+            k[i,j] = k_n_m(x_train[i],x_test[j],theta)
+    return k
+    #return np.reshape(k, (k.shape[0],-1))
     
     
 def gp_predictive_distribution( x_train, x_test, theta, C = None ):
@@ -107,9 +116,14 @@ def gp_predictive_distribution( x_train, x_test, theta, C = None ):
     invC = np.linalg.inv(C)
     #k = computeK(x_train, x_test, theta)
     #mu = np.zeros((x_train.shape[0],x_test.shape[0]))
-    mu = np.zeros(x_test.shape[0])
+    #mu = np.zeros(x_test.shape[0])
     #var = np.zeros((x_train.shape[0], x_test.shape[0]))
-    var = np.zeros(x_test.shape[0])
+    #var = np.zeros(x_test.shape[0])
+    k = computek(x_train,x_test, theta)
+    c = computec(x_test, theta, beta)
+    mu = np.dot(np.dot(k.T, invC), x_train)
+    var = c - np.dot(np.dot(k.T,invC), k)
+    '''
     for i in range(len(x_test)):
         c = computec(x_test[i],x_test[i], theta, beta)
         #k = computeK(x_train, np.asarray(x_test[i]), theta)
@@ -118,6 +132,7 @@ def gp_predictive_distribution( x_train, x_test, theta, C = None ):
         #print np.dot(k.T, invC).shape, x_train.shape
         mu[i] = np.dot(np.dot(k.T,invC), x_train)
         var[i] = c - np.dot(np.dot(k.T,invC),k)
+    '''
     '''
     if C == None:
         C = computeC(K, beta)
@@ -129,6 +144,9 @@ def gp_predictive_distribution( x_train, x_test, theta, C = None ):
     mu = np.dot(np.dot(k.T,invC).T,x_test)
     var = c - mu
     '''
+    #print mu.shape, var.shape
+    mu = np.reshape(mu, (x_test.shape[0]))
+    #print mu.shape
     return mu, var
     
 def gp_log_likelihood(x_train, t_train, theta, C = None, invC = None):
@@ -154,11 +172,15 @@ def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, l
     std_total = np.sqrt(np.diag(var_test))         # includes all uncertainty, model and target noise 
     std_model = np.sqrt( std_total**2 - 1.0/beta ) # remove data noise to get model uncertainty in stddev
     std_combo = std_model + np.sqrt( 1.0/beta )    # add stddev (note: not the same as full)
-    
+    #print (2*std_combo).shape
+    #test = 2*std_combo
+    #print mu_test.shape
+    #print np.add(mu_test,test).shape
+    #print (mu_test+2*std_combo).shape
     plt.plot( x_test, y_test, 'b', lw=3, label = str(theta)+str(" ")+str(log_like))
     plt.plot( x_test, mu_test, 'k--', lw=2 )
-    plt.fill_between( x_test, (mu_test+2*std_combo).reshape(-1),(mu_test-2*std_combo).reshape(-1), color='k', alpha=0.25 )
-    plt.fill_between( x_test, (mu_test+2*std_model).reshape(-1),(mu_test-2*std_model).reshape(-1), color='r', alpha=0.25 )
+    plt.fill_between( x_test, mu_test+2*std_combo,mu_test-2*std_combo, color='k', alpha=0.25 )
+    plt.fill_between( x_test, mu_test+2*std_model,mu_test-2*std_model, color='r', alpha=0.25 )
     plt.plot( x_train, t_train, 'ro', ms=10 )
 
 
@@ -177,8 +199,8 @@ plt.figure("predictive distribution with 2 training data points")
 for i in range(len(thetas)):
     mu_test, var_test = gp_predictive_distribution(x_train, x_test, thetas[i])
     #print mu_test.shape, var_test.shape
-    mu_test = mu_test.reshape((mu_test.shape[0],-1))
-    var_test = var_test.reshape((var_test.shape[0], -1))
+    #mu_test = mu_test.reshape((mu_test.shape[0],-1))
+    #var_test = var_test.reshape((var_test.shape[0], -1))
     log_like = gp_log_likelihood(x_train, t_train, thetas[i])
     #print log_like
     #print mu_test.shape, var_test.shape
@@ -202,8 +224,8 @@ plt.figure("predictive distribution with 10 training data points")
 for i in range(len(thetas)):
     mu_test, var_test = gp_predictive_distribution(x_train, x_test, thetas[i])
     #print mu_test.shape, var_test.shape
-    mu_test = mu_test.reshape((mu_test.shape[0],-1))
-    var_test = var_test.reshape((var_test.shape[0], -1))
+    #mu_test = mu_test.reshape((mu_test.shape[0],-1))
+    #var_test = var_test.reshape((var_test.shape[0], -1))
     log_like = gp_log_likelihood(x_train, t_train, thetas[i])
     #print log_like
     #print mu_test.shape, var_test.shape
