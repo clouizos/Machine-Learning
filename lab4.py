@@ -101,8 +101,9 @@ def computek(x_train, x, theta):
     
 def gp_predictive_distribution( x_train, x_test, theta, C = None ):
     #k = k_n_m(x_train,x_train,theta)
-    K = computeK(x_train, x_train, theta)
-    C = computeC(K, beta)
+    if C == None:
+        K = computeK(x_train, x_train, theta)
+        C = computeC(K, beta)
     invC = np.linalg.inv(C)
     #k = computeK(x_train, x_test, theta)
     #mu = np.zeros((x_train.shape[0],x_test.shape[0]))
@@ -133,15 +134,14 @@ def gp_predictive_distribution( x_train, x_test, theta, C = None ):
 def gp_log_likelihood(x_train, t_train, theta, C = None, invC = None):
     K = computeK(x_train, x_train, theta)
     if C == None:
-        C = computeC(K, theta)
+        C = computeC(K, beta)
     if invC == None:
         invC = np.linalg.inv(C)
     
-    log_like = -(1/2)*np.log(np.abs(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -\
-                    (C.shape[0]/2)*np.log(2*np.pi)    
+    log_like = -(1/2)*np.log(np.linalg.norm(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)    
     return log_like
     
-def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta ):
+def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, log_like ):
     # x_test: 
     # y_test:   the true function at x_test
     # mu_test:   predictive mean at x_test
@@ -155,7 +155,7 @@ def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta ):
     std_model = np.sqrt( std_total**2 - 1.0/beta ) # remove data noise to get model uncertainty in stddev
     std_combo = std_model + np.sqrt( 1.0/beta )    # add stddev (note: not the same as full)
     
-    plt.plot( x_test, y_test, 'b', lw=3, label = str(theta))
+    plt.plot( x_test, y_test, 'b', lw=3, label = str(theta)+str(" ")+str(log_like))
     plt.plot( x_test, mu_test, 'k--', lw=2 )
     plt.fill_between( x_test, (mu_test+2*std_combo).reshape(-1),(mu_test-2*std_combo).reshape(-1), color='k', alpha=0.25 )
     plt.fill_between( x_test, (mu_test+2*std_model).reshape(-1),(mu_test-2*std_model).reshape(-1), color='r', alpha=0.25 )
@@ -179,9 +179,11 @@ for i in range(len(thetas)):
     #print mu_test.shape, var_test.shape
     mu_test = mu_test.reshape((mu_test.shape[0],-1))
     var_test = var_test.reshape((var_test.shape[0], -1))
+    log_like = gp_log_likelihood(x_train, t_train, thetas[i])
+    #print log_like
     #print mu_test.shape, var_test.shape
     plt.subplot(2,3,i+1)
-    gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta)
+    gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
     plt.legend(loc = 2, prop = {'size': 6})
     plt.xlim(-1,1)
 
@@ -202,9 +204,11 @@ for i in range(len(thetas)):
     #print mu_test.shape, var_test.shape
     mu_test = mu_test.reshape((mu_test.shape[0],-1))
     var_test = var_test.reshape((var_test.shape[0], -1))
+    log_like = gp_log_likelihood(x_train, t_train, thetas[i])
+    #print log_like
     #print mu_test.shape, var_test.shape
     plt.subplot(2,3,i+1)
-    gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta)
+    gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
     plt.legend(loc = 2, prop = {'size': 6})
     plt.xlim(-1,1)
     
