@@ -31,7 +31,7 @@ t_test = add_noise( y_test, sigma )
 #plt.plot( x_test, t_test, 'go')
 
 def k_n_m( xn, xm, thetas ):
-    return thetas[0]*np.exp((-thetas[1]/2)*np.linalg.norm(xn - xm)**2)+thetas[2]+thetas[3]*xn*xm
+    return thetas[0]*np.exp((-thetas[1]/2)*(xn - xm)**2)+thetas[2]+thetas[3]*xn*xm
     
 def computeK( X1, X2, thetas ):
     K = np.zeros((X1.shape[0],X2.shape[0]))
@@ -122,7 +122,7 @@ def gp_predictive_distribution( x_train, x_test, theta, C = None ):
     k = computek(x_train,x_test, theta)
     c = computec(x_test, theta, beta)
     mu = np.dot(np.dot(k.T, invC), x_train)
-    var = c - np.dot(np.dot(k.T,invC), k)
+    var = c - np.dot(np.dot(k.T, invC), k)
     '''
     for i in range(len(x_test)):
         c = computec(x_test[i],x_test[i], theta, beta)
@@ -197,7 +197,7 @@ t_train = add_noise(y_train, sigma)
 
 plt.figure("predictive distribution with 2 training data points")
 for i in range(len(thetas)):
-    mu_test, var_test = gp_predictive_distribution(x_train, x_test, thetas[i])
+    mu_test, var_test = gp_predictive_distribution(t_train, t_test, thetas[i])
     #print mu_test.shape, var_test.shape
     #mu_test = mu_test.reshape((mu_test.shape[0],-1))
     #var_test = var_test.reshape((var_test.shape[0], -1))
@@ -208,6 +208,7 @@ for i in range(len(thetas)):
     gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
     plt.legend(loc = 2, prop = {'size': 6})
     plt.xlim(-1,1)
+    #plt.ylim(-5,5)
 
 '''
 training for 10 datapoints
@@ -222,7 +223,7 @@ t_train = add_noise(y_train, sigma)
 
 plt.figure("predictive distribution with 10 training data points")
 for i in range(len(thetas)):
-    mu_test, var_test = gp_predictive_distribution(x_train, x_test, thetas[i])
+    mu_test, var_test = gp_predictive_distribution(t_train, t_test, thetas[i])
     #print mu_test.shape, var_test.shape
     #mu_test = mu_test.reshape((mu_test.shape[0],-1))
     #var_test = var_test.reshape((var_test.shape[0], -1))
@@ -233,5 +234,6 @@ for i in range(len(thetas)):
     gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
     plt.legend(loc = 2, prop = {'size': 6})
     plt.xlim(-1,1)
+    #plt.ylim(-5,5)
     
 plt.show()
