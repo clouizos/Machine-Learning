@@ -138,7 +138,7 @@ def gp_log_likelihood(x_train, t_train, theta, C = None, invC = None):
     if invC == None:
         invC = np.linalg.inv(C)
     
-    log_like = -(1/2)*np.log(np.linalg.norm(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)    
+    log_like = -(1/2)*np.log(np.linalg.det(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)    
     return log_like
     
 def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, log_like ):
