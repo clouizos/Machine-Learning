@@ -35,6 +35,7 @@ def k_n_m( xn, xm, thetas ):
     
 def computeK( X1, X2, thetas ):
     K = np.zeros((X1.shape[0],X2.shape[0]))
+    #K = np.zeros((X1.shape[0],len(X2)))
     for i in range(len(X1)):
         for j in range(len(X2)):            
             #if i == j:
@@ -81,27 +82,52 @@ def computeC(K, beta):
                 C[i,j] = K[i,j]
     return C
     
-def computec(K, beta):
+def computec(xn, xm, theta, beta):
+    '''
     c = np.zeros((K.shape))
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             c[i,j] = K[i,j] + (1/beta)
-    return c
+    '''
+    return k_n_m(xn, xm, theta) + (1/beta)
+    
+def computek(x_train, x, theta):
+    k = np.zeros(x_train.shape[0])
+    #K = np.zeros((X1.shape[0],len(X2)))
+    for i in range(k.shape[0]):
+        k[i] = k_n_m(x_train[i],x,theta)
+    return np.reshape(k, (k.shape[0],-1))
+    
     
 def gp_predictive_distribution( x_train, x_test, theta, C = None ):
     #k = k_n_m(x_train,x_train,theta)
     K = computeK(x_train, x_train, theta)
-    mu = np.zeros((x_train.shape[0],x_test.shape[0]))
-    var = np.zeros((x_train.shape[0], x_test.shape[0]))
+    C = computeC(K, beta)
+    invC = np.linalg.inv(C)
+    #k = computeK(x_train, x_test, theta)
+    #mu = np.zeros((x_train.shape[0],x_test.shape[0]))
+    mu = np.zeros(x_test.shape[0])
+    #var = np.zeros((x_train.shape[0], x_test.shape[0]))
+    var = np.zeros(x_test.shape[0])
+    for i in range(len(x_test)):
+        c = computec(x_test[i],x_test[i], theta, beta)
+        #k = computeK(x_train, np.asarray(x_test[i]), theta)
+        k = computek(x_train, x_test[i], theta)
+        #print k.T.shape, invC.shape,x_test[i]
+        #print np.dot(k.T, invC).shape, x_train.shape
+        mu[i] = np.dot(np.dot(k.T,invC), x_train)
+        var[i] = c - np.dot(np.dot(k.T,invC),k)
+    '''
     if C == None:
         C = computeC(K, beta)
     c = computec(K, beta)
+    print c.shape
     invC = np.linalg.inv(C)
-    for i in range(len(x_test)):
-    #print K.T.shape, invC.shape, x_test.shape
-        mu[:,i] = np.dot(np.dot(K.T,invC),x_test[i])
-        var[:,i] = c - mu
-    
+    #for i in range(len(x_test)):
+    print k.T.shape, invC.shape, x_test.shape
+    mu = np.dot(np.dot(k.T,invC).T,x_test)
+    var = c - mu
+    '''
     return mu, var
     
 def gp_log_likelihood(x_train, t_train, theta, C = None, invC = None):
@@ -129,10 +155,10 @@ def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta ):
     std_model = np.sqrt( std_total**2 - 1.0/beta ) # remove data noise to get model uncertainty in stddev
     std_combo = std_model + np.sqrt( 1.0/beta )    # add stddev (note: not the same as full)
     
-    plt.plot( x_test, y_test, 'b', lw=3)
+    plt.plot( x_test, y_test, 'b', lw=3, label = str(theta))
     plt.plot( x_test, mu_test, 'k--', lw=2 )
-    plt.fill_between( x_test, mu_test+2*std_combo,mu_test-2*std_combo, color='k', alpha=0.25 )
-    plt.fill_between( x_test, mu_test+2*std_model,mu_test-2*std_model, color='r', alpha=0.25 )
+    plt.fill_between( x_test, (mu_test+2*std_combo).reshape(-1),(mu_test-2*std_combo).reshape(-1), color='k', alpha=0.25 )
+    plt.fill_between( x_test, (mu_test+2*std_model).reshape(-1),(mu_test-2*std_model).reshape(-1), color='r', alpha=0.25 )
     plt.plot( x_train, t_train, 'ro', ms=10 )
 
 
@@ -147,12 +173,17 @@ mu_train = np.zeros(N_train)
 y_train = true_mean_function(x_train)
 t_train = add_noise(y_train, sigma)
 
+plt.figure("predictive distribution with 2 training data points")
 for i in range(len(thetas)):
     mu_test, var_test = gp_predictive_distribution(x_train, x_test, thetas[i])
-    print mu_test, var_test
+    #print mu_test.shape, var_test.shape
+    mu_test = mu_test.reshape((mu_test.shape[0],-1))
+    var_test = var_test.reshape((var_test.shape[0], -1))
+    #print mu_test.shape, var_test.shape
+    plt.subplot(2,3,i+1)
     gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta)
-
-plt.show()
+    plt.legend(loc = 2, prop = {'size': 6})
+    plt.xlim(-1,1)
 
 '''
 training for 10 datapoints
@@ -164,3 +195,17 @@ x_train = np.linspace(-1, 1, N_train)
 mu_train = np.zeros(N_train)
 y_train = true_mean_function(x_train)
 t_train = add_noise(y_train, sigma)
+
+plt.figure("predictive distribution with 10 training data points")
+for i in range(len(thetas)):
+    mu_test, var_test = gp_predictive_distribution(x_train, x_test, thetas[i])
+    #print mu_test.shape, var_test.shape
+    mu_test = mu_test.reshape((mu_test.shape[0],-1))
+    var_test = var_test.reshape((var_test.shape[0], -1))
+    #print mu_test.shape, var_test.shape
+    plt.subplot(2,3,i+1)
+    gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta)
+    plt.legend(loc = 2, prop = {'size': 6})
+    plt.xlim(-1,1)
+    
+plt.show()
