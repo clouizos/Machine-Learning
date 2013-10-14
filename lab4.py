@@ -110,7 +110,7 @@ def computek(x_train, x_test, theta):
     #return np.reshape(k, (k.shape[0],-1))
     
     
-def gp_predictive_distribution( x_train, x_test, theta, C = None ):
+def gp_predictive_distribution( x_train, x_test, t_train, theta, C = None ):
     #k = k_n_m(x_train,x_train,theta)
     if C == None:
         K = computeK(x_train, x_train, theta)
@@ -123,7 +123,7 @@ def gp_predictive_distribution( x_train, x_test, theta, C = None ):
     #var = np.zeros(x_test.shape[0])
     k = computek(x_train,x_test, theta)
     c = computec(x_test, theta, beta)
-    mu = np.dot(np.dot(k.T, invC), x_train)
+    mu = np.dot(np.dot(k.T, invC), t_train)
     var = c - np.dot(np.dot(k.T, invC), k)
     '''
     for i in range(len(x_test)):
@@ -201,7 +201,26 @@ def grid_search(x_train, t_train, thetas):
     results = sorted(results, key = itemgetter(1), reverse = True)
     return results
     
-
+def create_grid_thetas(max1,max2,max3,max4):
+    thetas = []
+    step = 0.5
+    max1 = np.arange(0,max1+step,step)
+    max2 = np.arange(0,max2+step,step)
+    max3 = np.arange(0,max3+step,step)
+    max4 = np.arange(0,max4+step,step)
+    #theta = []
+    for i in max1:
+        for j in max2:
+            for k in max3:
+                for l in max4:
+                    #theta.append(i)
+                    #theta.append(j)
+                    #theta.append(k)
+                    #theta.append(l)
+                    #thetas.append(theta)
+                    thetas.append((i,j,k,l))
+    return thetas
+    
 '''
 training for 2 datapoints
 '''    
@@ -215,7 +234,7 @@ t_train = add_noise(y_train, sigma)
 
 plt.figure("predictive distribution with 2 training data points")
 for i in range(len(thetas)):
-    mu_test, var_test = gp_predictive_distribution(t_train, t_test, thetas[i])
+    mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, thetas[i])
     #print mu_test.shape, var_test.shape
     #mu_test = mu_test.reshape((mu_test.shape[0],-1))
     #var_test = var_test.reshape((var_test.shape[0], -1))
@@ -226,7 +245,7 @@ for i in range(len(thetas)):
     gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
     plt.legend(loc = 2, prop = {'size': 6})
     plt.xlim(-1,1)
-    #plt.ylim(-5,5)
+    plt.ylim(-5,5)
 
 '''
 training for 10 datapoints
@@ -241,7 +260,7 @@ t_train = add_noise(y_train, sigma)
 
 plt.figure("predictive distribution with 10 training data points")
 for i in range(len(thetas)):
-    mu_test, var_test = gp_predictive_distribution(t_train, t_test, thetas[i])
+    mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, thetas[i])
     #print mu_test.shape, var_test.shape
     #mu_test = mu_test.reshape((mu_test.shape[0],-1))
     #var_test = var_test.reshape((var_test.shape[0], -1))
@@ -252,17 +271,22 @@ for i in range(len(thetas)):
     gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
     plt.legend(loc = 2, prop = {'size': 6})
     plt.xlim(-1,1)
-    #plt.ylim(-5,5)
-    
-grid_res = grid_search(x_train, t_train, thetas)
+    plt.ylim(-5,5)
+
+thetas_grid = create_grid_thetas(2.0,10.0,5.0,10.0)  
+#thetas_grid = create_grid_thetas(2.0,5.0,2.0,0.0) 
+grid_res = grid_search(x_train, t_train, thetas_grid)
 best = grid_res[0][0]
+print best
 worst = grid_res[len(grid_res)-1][0]
 #print grid search results
+print "---------------------results from the the grid search-----------------------"
 print grid_res
+print "----------------------------------------------------------------------------"
 
 #plot best combination of thetas
 plt.figure("best and worst thetas according to the grid search")
-mu_test, var_test = gp_predictive_distribution(t_train, t_test, best)
+mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, best)
 log_like = grid_res[0][1]
 plt.subplot(2,1,1)
 label = 'best'
@@ -271,7 +295,7 @@ plt.legend(loc = 2, prop = {'size': 6})
 plt.xlim(-1,1)
 
 #plot worst combination of thetas
-mu_test, var_test = gp_predictive_distribution(t_train, t_test, worst)
+mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, worst)
 log_like = grid_res[len(grid_res)-1][1]
 plt.subplot(2,1,2)
 label = 'worst'
