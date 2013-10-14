@@ -6,9 +6,11 @@ Created on Wed Oct  9 08:20:16 2013
 """
 
 from __future__ import division
+from operator import itemgetter
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+
 
 sigma = 0.1
 beta  = 1.0 / pow(sigma,2) # this is the beta used in Bishop Eqn. 6.59
@@ -152,14 +154,16 @@ def gp_predictive_distribution( x_train, x_test, theta, C = None ):
 def gp_log_likelihood(x_train, t_train, theta, C = None, invC = None):
     K = computeK(x_train, x_train, theta)
     if C == None:
+        #print "No C given, calcuating again..."
         C = computeC(K, beta)
     if invC == None:
+        #print "No invC given, calculating again..."
         invC = np.linalg.inv(C)
     
     log_like = -(1/2)*np.log(np.linalg.det(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)    
     return log_like
     
-def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, log_like ):
+def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, log_like, label = None ):
     # x_test: 
     # y_test:   the true function at x_test
     # mu_test:   predictive mean at x_test
@@ -177,12 +181,26 @@ def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, l
     #print mu_test.shape
     #print np.add(mu_test,test).shape
     #print (mu_test+2*std_combo).shape
-    plt.plot( x_test, y_test, 'b', lw=3, label = str(theta)+str(" ")+str(log_like))
+    if label == None:
+        plt.plot( x_test, y_test, 'b', lw=3, label = str(theta)+str(" ")+str(log_like))
+    else:
+        plt.plot( x_test, y_test, 'b', lw=3, label = label+str(" ")+str(theta))
     plt.plot( x_test, mu_test, 'k--', lw=2 )
     plt.fill_between( x_test, mu_test+2*std_combo,mu_test-2*std_combo, color='k', alpha=0.25 )
     plt.fill_between( x_test, mu_test+2*std_model,mu_test-2*std_model, color='r', alpha=0.25 )
     plt.plot( x_train, t_train, 'ro', ms=10 )
 
+def grid_search(x_train, t_train, thetas):
+    results = []
+    for theta in thetas:
+        K = computeK(x_train, x_train, theta)
+        C = computeC(K, beta)
+        invC = np.linalg.inv(C)
+        log_like = gp_log_likelihood(x_train, t_train, theta, C, invC)
+        results.append((theta, log_like))
+    results = sorted(results, key = itemgetter(1), reverse = True)
+    return results
+    
 
 '''
 training for 2 datapoints
@@ -236,4 +254,29 @@ for i in range(len(thetas)):
     plt.xlim(-1,1)
     #plt.ylim(-5,5)
     
+grid_res = grid_search(x_train, t_train, thetas)
+best = grid_res[0][0]
+worst = grid_res[len(grid_res)-1][0]
+#print grid search results
+print grid_res
+
+#plot best combination of thetas
+plt.figure("best and worst thetas according to the grid search")
+mu_test, var_test = gp_predictive_distribution(t_train, t_test, best)
+log_like = grid_res[0][1]
+plt.subplot(2,1,1)
+label = 'best'
+gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, best, beta, log_like, label)
+plt.legend(loc = 2, prop = {'size': 6})
+plt.xlim(-1,1)
+
+#plot worst combination of thetas
+mu_test, var_test = gp_predictive_distribution(t_train, t_test, worst)
+log_like = grid_res[len(grid_res)-1][1]
+plt.subplot(2,1,2)
+label = 'worst'
+gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, worst, beta, log_like, label)
+plt.legend(loc = 2, prop = {'size': 6})
+plt.xlim(-1,1)
+
 plt.show()
