@@ -7,8 +7,8 @@ Created on Wed Oct  9 08:20:16 2013
 
 from __future__ import division
 from operator import itemgetter
+from scipy import optimize
 import numpy as np
-import scipy as sp
 import matplotlib.pyplot as plt
 
 
@@ -40,12 +40,7 @@ def computeK( X1, X2, thetas ):
     #K = np.zeros((X1.shape[0],len(X2)))
     for i in range(len(X1)):
         for j in range(len(X2)):            
-            #if i == j:
-                #K[i,j] = k_n_m(X1[i],X2[j],thetas) + beta**(-1)*(1)
             K[i,j] = k_n_m(X1[i],X2[j],thetas)
-            #else:
-                #K[i,j] = k_n_m(X1[i],X2[j],thetas) + beta**(-1)*(0)            
-            #C[i,j] = k_n_m(X1[i],X2[j],thetas) + beta**(-1)*(X1[i]-X2[j])
     return K
 
 #thetas = (np.array([1.00,4.00,0.00,0.00]),np.array([9.00,4.00,0.00,0.00]),np.array([1.00,64.00,0.00,0.00]),
@@ -77,7 +72,6 @@ for i in range(len(thetas)):
 #plt.show()
 
 def computeC(K, beta):
-    #print K.shape
     C = np.zeros((K.shape))
     for i in range(C.shape[0]):
         for j in range(C.shape[1]):
@@ -88,78 +82,37 @@ def computeC(K, beta):
     return C
     
 def computec(x_test, theta, beta):
-    '''
-    c = np.zeros((K.shape))
-    for i in range(c.shape[0]):
-        for j in range(c.shape[1]):
-            c[i,j] = K[i,j] + (1/beta)
-    '''
     c = np.zeros(x_test.shape[0])
     for i in range(x_test.shape[0]):
         c[i] = k_n_m(x_test[i], x_test[i], theta) + (1/beta)
     return c
-    #return k_n_m(xn, xm, theta) + (1/beta)
     
 def computek(x_train, x_test, theta):
     k = np.zeros((x_train.shape[0],x_test.shape[0]))
-    #K = np.zeros((X1.shape[0],len(X2)))
     for j in range(x_test.shape[0]):
         for i in range(x_train.shape[0]):
             k[i,j] = k_n_m(x_train[i],x_test[j],theta)
     return k
-    #return np.reshape(k, (k.shape[0],-1))
     
     
 def gp_predictive_distribution( x_train, x_test, t_train, theta, C = None ):
-    #k = k_n_m(x_train,x_train,theta)
     if C == None:
         K = computeK(x_train, x_train, theta)
         C = computeC(K, beta)
     invC = np.linalg.inv(C)
-    #k = computeK(x_train, x_test, theta)
-    #mu = np.zeros((x_train.shape[0],x_test.shape[0]))
-    #mu = np.zeros(x_test.shape[0])
-    #var = np.zeros((x_train.shape[0], x_test.shape[0]))
-    #var = np.zeros(x_test.shape[0])
     k = computek(x_train,x_test, theta)
     c = computec(x_test, theta, beta)
     mu = np.dot(np.dot(k.T, invC), t_train)
     var = c - np.dot(np.dot(k.T, invC), k)
-    '''
-    for i in range(len(x_test)):
-        c = computec(x_test[i],x_test[i], theta, beta)
-        #k = computeK(x_train, np.asarray(x_test[i]), theta)
-        k = computek(x_train, x_test[i], theta)
-        #print k.T.shape, invC.shape,x_test[i]
-        #print np.dot(k.T, invC).shape, x_train.shape
-        mu[i] = np.dot(np.dot(k.T,invC), x_train)
-        var[i] = c - np.dot(np.dot(k.T,invC),k)
-    '''
-    '''
-    if C == None:
-        C = computeC(K, beta)
-    c = computec(K, beta)
-    print c.shape
-    invC = np.linalg.inv(C)
-    #for i in range(len(x_test)):
-    print k.T.shape, invC.shape, x_test.shape
-    mu = np.dot(np.dot(k.T,invC).T,x_test)
-    var = c - mu
-    '''
-    #print mu.shape, var.shape
     mu = np.reshape(mu, (x_test.shape[0]))
-    #print mu.shape
     return mu, var
     
 def gp_log_likelihood(x_train, t_train, theta, C = None, invC = None):
     K = computeK(x_train, x_train, theta)
     if C == None:
-        #print "No C given, calcuating again..."
         C = computeC(K, beta)
     if invC == None:
-        #print "No invC given, calculating again..."
         invC = np.linalg.inv(C)
-    
     log_like = -(1/2)*np.log(np.linalg.det(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)    
     return log_like
     
@@ -176,11 +129,7 @@ def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, l
     std_total = np.sqrt(np.diag(var_test))         # includes all uncertainty, model and target noise 
     std_model = np.sqrt( std_total**2 - 1.0/beta ) # remove data noise to get model uncertainty in stddev
     std_combo = std_model + np.sqrt( 1.0/beta )    # add stddev (note: not the same as full)
-    #print (2*std_combo).shape
-    #test = 2*std_combo
-    #print mu_test.shape
-    #print np.add(mu_test,test).shape
-    #print (mu_test+2*std_combo).shape
+    log_like = "%.2f" % log_like
     if label == None:
         plt.plot( x_test, y_test, 'b', lw=3, label = str(theta)+str(" ")+str(log_like))
     else:
@@ -204,30 +153,40 @@ def grid_search(x_train, t_train, thetas):
 def create_grid_thetas(max1,max2,max3,max4):
     thetas = []
     step = 0.5
-    max1 = np.arange(0,max1+step,step)
+    step2 = 0.1
+    max1 = np.arange(0,max1+step2,step2)
     max2 = np.arange(0,max2+step,step)
     max3 = np.arange(0,max3+step,step)
     max4 = np.arange(0,max4+step,step)
-    #theta = []
     for i in max1:
         for j in max2:
             for k in max3:
                 for l in max4:
-                    #theta.append(i)
-                    #theta.append(j)
-                    #theta.append(k)
-                    #theta.append(l)
-                    #thetas.append(theta)
                     thetas.append((i,j,k,l))
     return thetas
+
+# function to optimize  
+def func_like(thetas):
+    thetas = np.exp(thetas)
+    return -gp_log_likelihood(x_train, t_train, thetas)
+
+# derivative of that function
+def func_like_prime(thetas):
+     return np.array((np.exp((-thetas[1]/2)*(np.linalg.norm(x)))),(),(),())
+
+# function that tries to learn the hyperparameters
+def learn_hyperparameters(nr_hyper):
+    print optimize.fmin_cg(func_like,0)
+    
     
 '''
 training for 2 datapoints
 '''    
 N_train = 2
-#sigma = 0.1
-#beta = 1.0/(sigma**2)
-x_train = np.linspace(-1, 1, N_train)
+x_train = []
+for i in range(N_train):
+    x_train.append(np.random.uniform(-1,1))
+x_train = np.squeeze(np.asarray(x_train))
 mu_train = np.zeros(N_train)
 y_train = true_mean_function(x_train)
 t_train = add_noise(y_train, sigma)
@@ -235,25 +194,20 @@ t_train = add_noise(y_train, sigma)
 plt.figure("predictive distribution with 2 training data points")
 for i in range(len(thetas)):
     mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, thetas[i])
-    #print mu_test.shape, var_test.shape
-    #mu_test = mu_test.reshape((mu_test.shape[0],-1))
-    #var_test = var_test.reshape((var_test.shape[0], -1))
     log_like = gp_log_likelihood(x_train, t_train, thetas[i])
-    #print log_like
-    #print mu_test.shape, var_test.shape
     plt.subplot(2,3,i+1)
     gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
-    plt.legend(loc = 2, prop = {'size': 6})
+    plt.legend(loc = 3, prop = {'size': 6})
     plt.xlim(-1,1)
-    plt.ylim(-5,5)
 
 '''
 training for 10 datapoints
 '''
 N_train = 10
-#sigma = 0.1
-#beta = 1.0/(sigma**2)
-x_train = np.linspace(-1, 1, N_train)
+x_train = []
+for i in range(N_train):
+    x_train.append(np.random.uniform(-1,1))
+x_train = np.squeeze(np.asarray(x_train))
 mu_train = np.zeros(N_train)
 y_train = true_mean_function(x_train)
 t_train = add_noise(y_train, sigma)
@@ -261,27 +215,24 @@ t_train = add_noise(y_train, sigma)
 plt.figure("predictive distribution with 10 training data points")
 for i in range(len(thetas)):
     mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, thetas[i])
-    #print mu_test.shape, var_test.shape
-    #mu_test = mu_test.reshape((mu_test.shape[0],-1))
-    #var_test = var_test.reshape((var_test.shape[0], -1))
     log_like = gp_log_likelihood(x_train, t_train, thetas[i])
-    #print log_like
-    #print mu_test.shape, var_test.shape
     plt.subplot(2,3,i+1)
     gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, thetas[i], beta, log_like)
-    plt.legend(loc = 2, prop = {'size': 6})
+    plt.legend(loc = 3, prop = {'size': 6})
     plt.xlim(-1,1)
-    plt.ylim(-5,5)
 
-thetas_grid = create_grid_thetas(2.0,10.0,5.0,10.0)  
-#thetas_grid = create_grid_thetas(2.0,5.0,2.0,0.0) 
+#set maximum values for the grid search
+#thetas_grid = create_grid_thetas(5.0,5.0,5.0,10.0)  
+thetas_grid = create_grid_thetas(2.0,5.0,2.0,0.0) 
+#thetas_grid = create_grid_thetas(2.0,15.0,5.0,1.0)
+#thetas_grid = create_grid_thetas(1.0,1.0,1.0,1.0)
 grid_res = grid_search(x_train, t_train, thetas_grid)
 best = grid_res[0][0]
-print best
+#print best
 worst = grid_res[len(grid_res)-1][0]
 #print grid search results
 print "---------------------results from the the grid search-----------------------"
-print grid_res
+#print grid_res
 print "----------------------------------------------------------------------------"
 
 #plot best combination of thetas
@@ -293,6 +244,7 @@ label = 'best'
 gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, best, beta, log_like, label)
 plt.legend(loc = 2, prop = {'size': 6})
 plt.xlim(-1,1)
+#plt.ylim(-2,2)
 
 #plot worst combination of thetas
 mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, worst)
@@ -302,5 +254,7 @@ label = 'worst'
 gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, worst, beta, log_like, label)
 plt.legend(loc = 2, prop = {'size': 6})
 plt.xlim(-1,1)
+#plt.ylim(-2,2)
 
+learn_hyperparameters(4)
 plt.show()
