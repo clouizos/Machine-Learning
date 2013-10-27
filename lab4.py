@@ -259,7 +259,9 @@ def gp_log_likelihood_opt(phis, *args):
     C = computeC(K, beta)
     invC = np.linalg.inv(C)
     sign , logdet = np.linalg.slogdet(C)
-    log_like = -(1/2)*np.log(sign * np.exp(logdet)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)  
+    log_like = -(1/2)*np.log(sign * np.exp(logdet)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)
+    
+    # get the negative log-likelihood since we want to minimize  
     return -log_like
 
 
@@ -285,6 +287,7 @@ def grad_log_like(phis, *args):
             dert2[i,j] = np.exp(phis[2])
             dert3[i,j] = x_train[i]*x_train[j]*np.exp(phis[3])
     
+    # get the derivatives of the negative log-likelihood
     der[0] = -(((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
     der[1] = -(((-1/2)*np.trace(np.dot(invC, dert1))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert1), invC),t_train)))
     der[2] = -(((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
