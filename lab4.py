@@ -281,8 +281,12 @@ def gp_log_likelihood_opt(phis, *args):
 # derivative of that function
 def grad_log_like(phis, *args):
     a = 10**(-4)
-    #a = 10**(-5)
+    #a = 10**(-5) 
     x_train, t_train = args
+    dert0 = np.zeros((x_train.shape[0], x_train.shape[0]))
+    dert1 = np.zeros((x_train.shape[0], x_train.shape[0]))
+    dert2 = np.zeros((x_train.shape[0], x_train.shape[0]))
+    dert3 = np.zeros((x_train.shape[0], x_train.shape[0]))
     der = np.zeros_like(phis)
     index_shuf = range(len(x_train))
     index_shuf2 = range(len(x_train))
@@ -299,24 +303,23 @@ def grad_log_like(phis, *args):
             #dert2 = np.exp(phis[2])
             #dert3 = x_train[i]*x_train[j]*np.exp(phis[3])
             
-            dert0 = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)*np.exp(phis[0])
+            dert0[i,j] = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)*np.exp(phis[0])
             #dert0 = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)
-            dert1 = -0.5*np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
+            dert1[i,j] = -0.5*np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
             #dert1 = -0.5*phis[0]*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
             #dert2 = np.exp(phis[2])
-            dert2 = 1
-            dert3 = x_train[i]*x_train[j]*np.exp(phis[3])
+            dert2[i,j] = 1
+            dert3[i,j] = x_train[i]*x_train[j]*np.exp(phis[3])
             #dert3 = x_train[i]*x_train[j]
             
-            der[0] = der[0] + a * np.exp(phis[0]) * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
-            #der[0] = der[0] + a * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
-            der[1] = der[1] + a * np.exp(phis[1]) * (((-1/2)*np.trace(np.dot(invC, dert1))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert1), invC),t_train)))
-            #der[2] = der[2] + a * np.exp(phis[2]) * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
-            der[2] = der[2] + a * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
-            der[3] = der[3] + a * np.exp(phis[3]) * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
-            #der[3] = der[3] + a * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
-            #print j
-            return der
+    der[0] = der[0] + a * np.exp(phis[0]) * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
+    #der[0] = der[0] + a * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
+    der[1] = der[1] + a * np.exp(phis[1]) * (((-1/2)*np.trace(np.dot(invC, dert1))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert1), invC),t_train)))
+    #der[2] = der[2] + a * np.exp(phis[2]) * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
+    der[2] = der[2] + a * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
+    der[3] = der[3] + a * np.exp(phis[3]) * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
+    #der[3] = der[3] + a * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
+    
     return der
    
 args = (x_train, t_train)
@@ -347,20 +350,37 @@ print 'result:'
 #print np.exp(result.x)
 #print np.exp(result)
 print result
+log_likelihood_all = []
+iterations = []
+i=1
+for res in result:
+    if i == 2:
+        for j in range(len(res)):
+            thetas = (np.exp(res[j][0]), np.exp(res[j][1]), res[j][2], np.exp(res[j][3]))
+            log_likelihood_all.append(gp_log_likelihood(x_train, t_train, thetas))
+            iterations.append(i-1)
+    i += 1
+    
+print log_likelihood_all
 #plot best combination of thetas according to the learning procedure
 #best = (np.exp(result.x[0]), np.exp(result.x[1]), np.exp(result.x[2]), np.exp(result.x[3]))
 #best = (np.exp(result[0]), np.exp(result[1]), np.exp(result[2]), np.exp(result[3]))
 #best = (np.exp(result[0]), np.exp(result[1]), 0, 0)
 #best = np.exp(result)
-best = (np.exp(result[len(result)-1][0][0]), np.exp(result[len(result)-1][0][1]), result[len(result)-1][0][2], np.exp(result[len(result)-1][0][3]))
+best = (np.exp(result[0][0]), np.exp(result[0][1]), result[0][2], np.exp(result[0][3]))
 #best = (np.exp(result.x[0]), np.exp(result.x[1]), np.exp(result.x[2]), np.exp(result.x[3]))
 plt.figure("results according to the learned hyperparameters")
 mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, beta, best)
 log_like = gp_log_likelihood(x_train, t_train, best)
+log_likelihood_all.append(log_like)
+iterations.append(i)
 print 'log-likelihood: ' +str(log_like)
 label = 'learned'
 gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, best, beta, log_like, label)
 plt.legend(loc = 2, prop = {'size': 6})
 plt.xlim(-1,1)
 plt.ylim(-2,2)
+
+plt.figure('log-likelihood after each iteration')
+plt.plot(iterations,log_likelihood_all)
 plt.show()
