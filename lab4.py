@@ -253,10 +253,14 @@ def computeK_opt( X1, X2, phis ):
             K[i,j] = k_n_m_opt(X1[i],X2[j], phis)
     return K
     
+    
 def k_n_m_opt(xn, xm, phis):
     #return phis[0]*np.exp((-phis[1]/2)*(xn - xm)**2)+phis[2]+phis[3]*xn*xm
-    return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+np.exp(phis[2])+np.exp(phis[3])*xn*xm
-    #return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+phis[2]+np.exp(phis[3])*xn*xm
+    #return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+np.exp(phis[2])+np.exp(phis[3])*xn*xm
+    return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+phis[2]+np.exp(phis[3])*xn*xm
+    #return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+phis[2]+phis[3]*xn*xm
+    #return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+phis[2]+phis[3]*xn*xm
+ 
  
 # function to optimize       
 def gp_log_likelihood_opt(phis, *args):
@@ -273,6 +277,7 @@ def gp_log_likelihood_opt(phis, *args):
     log_like = -(1/2)*np.log(np.linalg.det(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)   
     return -log_like
 
+
 # derivative of that function
 def grad_log_like(phis, *args):
     a = 10**(-4)
@@ -281,8 +286,8 @@ def grad_log_like(phis, *args):
     der = np.zeros_like(phis)
     index_shuf = range(len(x_train))
     index_shuf2 = range(len(x_train))
-    #shuffle(index_shuf)
-    #shuffle(index_shuf2)
+    shuffle(index_shuf)
+    shuffle(index_shuf2)
     K = computeK_opt(x_train, x_train, phis)
     #print K
     C = computeC(K, beta)
@@ -295,14 +300,23 @@ def grad_log_like(phis, *args):
             #dert3 = x_train[i]*x_train[j]*np.exp(phis[3])
             
             dert0 = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)*np.exp(phis[0])
+            #dert0 = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)
             dert1 = -0.5*np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
-            dert2 = np.exp(phis[2])
+            #dert1 = -0.5*phis[0]*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
+            #dert2 = np.exp(phis[2])
+            dert2 = 1
             dert3 = x_train[i]*x_train[j]*np.exp(phis[3])
+            #dert3 = x_train[i]*x_train[j]
             
             der[0] = der[0] + a * np.exp(phis[0]) * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
+            #der[0] = der[0] + a * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
             der[1] = der[1] + a * np.exp(phis[1]) * (((-1/2)*np.trace(np.dot(invC, dert1))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert1), invC),t_train)))
-            der[2] = der[2] + a * np.exp(phis[2]) * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
+            #der[2] = der[2] + a * np.exp(phis[2]) * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
+            der[2] = der[2] + a * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
             der[3] = der[3] + a * np.exp(phis[3]) * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
+            #der[3] = der[3] + a * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
+            #print j
+            return der
     return der
    
 args = (x_train, t_train)
@@ -321,25 +335,29 @@ err = optimize.check_grad(gp_log_likelihood_opt, grad_log_like, init_phis, x_tra
 print "error: " + str(err)
 print
 
-result = optimize.fmin_cg(gp_log_likelihood_opt, init_phis, args=args)
-#result = optimize.fmin_cg(gp_log_likelihood_opt, init_phis, fprime=grad_log_like, args=args)
+#result = optimize.fmin_cg(gp_log_likelihood_opt, init_phis, args=args)
+result = optimize.fmin_cg(gp_log_likelihood_opt, init_phis, fprime=grad_log_like, args=args, retall = True)
 #result = optimize.fmin_bfgs(gp_log_likelihood_opt, init_phis, args=args)
+#result = optimize.fmin_bfgs(gp_log_likelihood_opt, init_phis, fprime = grad_log_like, args=args)
+#result = optimize.minimize(gp_log_likelihood_opt, init_phis, jac = grad_log_like, args = args, method = 'CG', options = opts)
 #result = optimize.minimize(gp_log_likelihood_opt, init_phis, jac = grad_log_like, args = args, method = 'CG', options = opts)
 #result = optimize.minimize(gp_log_likelihood_opt, init_phis, args = args, method = 'CG', options = opts)
-print 'result'
+print 'result:'
 #print result.x
 #print np.exp(result.x)
-print np.exp(result)
+#print np.exp(result)
+print result
 #plot best combination of thetas according to the learning procedure
 #best = (np.exp(result.x[0]), np.exp(result.x[1]), np.exp(result.x[2]), np.exp(result.x[3]))
 #best = (np.exp(result[0]), np.exp(result[1]), np.exp(result[2]), np.exp(result[3]))
 #best = (np.exp(result[0]), np.exp(result[1]), 0, 0)
-best = np.exp(result)
+#best = np.exp(result)
+best = (np.exp(result[len(result)-1][0][0]), np.exp(result[len(result)-1][0][1]), result[len(result)-1][0][2], np.exp(result[len(result)-1][0][3]))
 #best = (np.exp(result.x[0]), np.exp(result.x[1]), np.exp(result.x[2]), np.exp(result.x[3]))
 plt.figure("results according to the learned hyperparameters")
 mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, beta, best)
 log_like = gp_log_likelihood(x_train, t_train, best)
-print log_like
+print 'log-likelihood: ' +str(log_like)
 label = 'learned'
 gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, best, beta, log_like, label)
 plt.legend(loc = 2, prop = {'size': 6})
