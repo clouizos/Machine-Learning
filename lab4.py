@@ -276,8 +276,9 @@ def gp_log_likelihood_opt(phis, *args):
     C = computeC(K, beta)
     invC = np.linalg.inv(C)
     log_like = -(1/2)*np.log(np.linalg.det(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)  
-    if math.isnan(log_like):
-         print C
+    #if math.isnan(log_like):
+    #     print C
+    #print np.linalg.det(C)
     return -log_like
 
 
@@ -306,7 +307,7 @@ def grad_log_like(phis, *args):
             #dert2 = np.exp(phis[2])
             #dert3 = x_train[i]*x_train[j]*np.exp(phis[3])
             
-            dert0[i,j] = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)*np.exp(phis[0])
+            dert0[i,j] = np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*np.exp(phis[0])
             #dert0 = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)
             dert1[i,j] = -0.5*np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
             #dert1 = -0.5*phis[0]*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
@@ -318,6 +319,7 @@ def grad_log_like(phis, *args):
     der[0] = -np.exp(phis[0]) * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
     der[1] = -np.exp(phis[1]) * (((-1/2)*np.trace(np.dot(invC, dert1))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert1), invC),t_train)))
     der[2] = -np.exp(phis[2]) * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
+    #der[2] = - (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
     der[3] = -np.exp(phis[3]) * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
     
     return der
@@ -356,7 +358,7 @@ i=1
 for res in result:
     if i == 2:
         for j in range(len(res)):
-            thetas = (np.exp(res[j][0]), np.exp(res[j][1]), res[j][2], np.exp(res[j][3]))
+            thetas = (np.exp(res[j][0]), np.exp(res[j][1]), np.exp(res[j][2]), np.exp(res[j][3]))
             log_likelihood_all.append(gp_log_likelihood(x_train, t_train, thetas))
             iterations.append(i-1)
     i += 1
