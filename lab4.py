@@ -8,8 +8,6 @@ Created on Wed Oct  9 08:20:16 2013
 from __future__ import division
 from operator import itemgetter
 from scipy import optimize
-from random import shuffle
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -115,7 +113,9 @@ def gp_log_likelihood(x_train, t_train, theta, C = None, invC = None):
         C = computeC(K, beta)
     if invC == None:
         invC = np.linalg.inv(C)
-    log_like = -(1/2)*np.log(np.linalg.det(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)    
+        
+    sign, logdet = np.linalg.slogdet(C)
+    log_like = -(1/2)*np.log(sign*np.exp(logdet)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)    
     return log_like
     
 def gp_plot( x_test, y_test, mu_test, var_test, x_train, t_train, theta, beta, log_like, label = None ):
@@ -212,15 +212,12 @@ for i in range(len(thetas)):
     plt.xlim(-1,1)
 
 #set maximum values for the grid search
-#thetas_grid = create_grid_thetas(5.0,5.0,5.0,10.0)  
-thetas_grid = create_grid_thetas(2.0,5.0,2.0,0.0) 
-#thetas_grid = create_grid_thetas(2.0,15.0,5.0,1.0)
-#thetas_grid = create_grid_thetas(1.0,1.0,1.0,1.0)
+thetas_grid = create_grid_thetas(2.0,5.0,2.0,2.0) 
 grid_res = grid_search(x_train, t_train, thetas_grid)
+
+#get the best and worst results
 best = grid_res[0][0]
-#print best
 worst = grid_res[len(grid_res)-1][0]
-#print grid search results
 print "---------------------results from the the grid search-----------------------"
 #print grid_res
 print "----------------------------------------------------------------------------"
@@ -234,7 +231,6 @@ label = 'best'
 gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, best, beta, log_like, label)
 plt.legend(loc = 2, prop = {'size': 6})
 plt.xlim(-1,1)
-#plt.ylim(-2,2)
 
 #plot worst combination of thetas
 mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, beta, worst)
@@ -244,11 +240,9 @@ label = 'worst'
 gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, worst, beta, log_like, label)
 plt.legend(loc = 2, prop = {'size': 6})
 plt.xlim(-1,1)
-#plt.ylim(-2,2)
 
 def computeK_opt( X1, X2, phis ):
     K = np.zeros((X1.shape[0],X2.shape[0]))
-    #K = np.zeros((X1.shape[0],len(X2)))
     for i in range(len(X1)):
         for j in range(len(X2)):            
             K[i,j] = k_n_m_opt(X1[i],X2[j], phis)
@@ -256,132 +250,84 @@ def computeK_opt( X1, X2, phis ):
     
     
 def k_n_m_opt(xn, xm, phis):
-    #return phis[0]*np.exp((-phis[1]/2)*(xn - xm)**2)+phis[2]+phis[3]*xn*xm
-    #return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+np.exp(phis[2])+np.exp(phis[3])*xn*xm
     return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+np.exp(phis[2])+np.exp(phis[3])*xn*xm
-    #return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+phis[2]+phis[3]*xn*xm
-    #return np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*(xn - xm)**2)+phis[2]+phis[3]*xn*xm
- 
- 
+  
 # function to optimize       
 def gp_log_likelihood_opt(phis, *args):
     x_train, t_train = args
-    #phis_ = np.zeros(4)
-    #phis_[0] = phis[0]
-    #phis_[1] = phis[1]
-    #phis_[2] = phi2
-    #phis_[3] = phi3
     K = computeK_opt(x_train, x_train, phis)
-    #print K
     C = computeC(K, beta)
     invC = np.linalg.inv(C)
-    log_like = -(1/2)*np.log(np.linalg.det(C)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)  
-    #if math.isnan(log_like):
-    #     print C
-    #print np.linalg.det(C)
+    sign , logdet = np.linalg.slogdet(C)
+    log_like = -(1/2)*np.log(sign * np.exp(logdet)) - (1/2)*np.dot(np.dot(t_train.T,invC),t_train) -(C.shape[0]/2)*np.log(2*np.pi)  
     return -log_like
 
 
 # derivative of that function
 def grad_log_like(phis, *args):
-    #a = 10**(-4)
-    #a = 10**(-5) 
     x_train, t_train = args
+    
+    #init the matrices for the derivatives of each phi according to each pair of data points
     dert0 = np.zeros((x_train.shape[0], x_train.shape[0]))
     dert1 = np.zeros((x_train.shape[0], x_train.shape[0]))
     dert2 = np.zeros((x_train.shape[0], x_train.shape[0]))
     dert3 = np.zeros((x_train.shape[0], x_train.shape[0]))
+    
+    #vector of the final result of the derivatives
     der = np.zeros_like(phis)
-    index_shuf = range(len(x_train))
-    index_shuf2 = range(len(x_train))
-    #shuffle(index_shuf)
-    #shuffle(index_shuf2)
     K = computeK_opt(x_train, x_train, phis)
-    #print K
     C = computeC(K, beta)
     invC = np.linalg.inv(C)
-    for i in index_shuf:
-        for j in index_shuf2:
-            #dert0 = (np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2))*np.exp(phis[0])
-            #dert1 = -0.5*np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
-            #dert2 = np.exp(phis[2])
-            #dert3 = x_train[i]*x_train[j]*np.exp(phis[3])
-            
+    for i in range(len(x_train)):
+        for j in range(len(x_train)):
             dert0[i,j] = np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*np.exp(phis[0])
-            #dert0 = np.exp((-np.exp(phis[1])/2)*(x_train[i] - x_train[j])**2)
             dert1[i,j] = -0.5*np.exp(phis[0])*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
-            #dert1 = -0.5*phis[0]*np.exp((-np.exp(phis[1])/2)*((x_train[i] - x_train[j])**2))*((x_train[i] - x_train[j])**2)*np.exp(phis[1])
             dert2[i,j] = np.exp(phis[2])
-            #dert2[i,j] = 1
             dert3[i,j] = x_train[i]*x_train[j]*np.exp(phis[3])
-            #dert3 = x_train[i]*x_train[j]
-            
-    der[0] = -np.exp(phis[0]) * (((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
-    der[1] = -np.exp(phis[1]) * (((-1/2)*np.trace(np.dot(invC, dert1))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert1), invC),t_train)))
-    der[2] = -np.exp(phis[2]) * (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
-    #der[2] = - (((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
-    der[3] = -np.exp(phis[3]) * (((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
+    
+    der[0] = -(((-1/2)*np.trace(np.dot(invC, dert0))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert0), invC),t_train)))
+    der[1] = -(((-1/2)*np.trace(np.dot(invC, dert1))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert1), invC),t_train)))
+    der[2] = -(((-1/2)*np.trace(np.dot(invC, dert2))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert2), invC),t_train)))
+    der[3] = -(((-1/2)*np.trace(np.dot(invC, dert3))) + ((1/2)*np.dot(np.dot(np.dot(np.dot(t_train.T, invC),dert3), invC),t_train)))
     
     return der
    
 args = (x_train, t_train)
-#args = (x_train, t_train, 0, 0)
-opts = {'maxiter' : None,    # default value.
-        'disp' : True,    # non-default value.
-        'gtol' : 1e-5,    # default value.
-        'norm' : np.inf,  # default value.
-        'eps' : 1.4901161193847656e-08}  # default value.
-        
+
+# initial phis closer to the best result of the grid search, assume that it is closer to the global maximum        
 init_phis = np.asarray((2, 5, 0, 0)) 
-#init_phis = np.asarray((0, 0)) 
 
-print grad_log_like(init_phis, x_train, t_train)
-err = optimize.check_grad(gp_log_likelihood_opt, grad_log_like, init_phis, x_train, t_train)
-print "error: " + str(err)
-print
+# check correctness of gradient
+error = optimize.check_grad(gp_log_likelihood_opt, grad_log_like, init_phis, x_train, t_train)
+print 'error on the gradient: ' + str(error)
 
-#result = optimize.fmin_cg(gp_log_likelihood_opt, init_phis, args=args)
+# run without the computed gradients
+#result2 = optimize.fmin_cg(gp_log_likelihood_opt, init_phis, args=args, retall = True)
+
+# run with the computed gradients instead of the approximated ones
 result = optimize.fmin_cg(gp_log_likelihood_opt, init_phis, fprime=grad_log_like, args=args, retall = True)
-#result = optimize.fmin_bfgs(gp_log_likelihood_opt, init_phis, args=args)
-#result = optimize.fmin_bfgs(gp_log_likelihood_opt, init_phis, fprime = grad_log_like, args=args)
-#result = optimize.minimize(gp_log_likelihood_opt, init_phis, jac = grad_log_like, args = args, method = 'CG', options = opts)
-#result = optimize.minimize(gp_log_likelihood_opt, init_phis, jac = grad_log_like, args = args, method = 'CG', options = opts)
-#result = optimize.minimize(gp_log_likelihood_opt, init_phis, args = args, method = 'CG', options = opts)
-#print 'result:'
-#print result.x
-#print np.exp(result.x)
-#print np.exp(result)
-#print result
+
+# find the log-likelihood after each iteration
 log_likelihood_all = []
-iterations = []
-i=1
+i = 1
 for res in result:
     if i == 2:
         for j in range(len(res)):
             thetas = (np.exp(res[j][0]), np.exp(res[j][1]), np.exp(res[j][2]), np.exp(res[j][3]))
             log_likelihood_all.append(gp_log_likelihood(x_train, t_train, thetas))
-            iterations.append(i-1)
-    i += 1
+    i+=1
     
-
 #plot best combination of thetas according to the learning procedure
-#best = (np.exp(result.x[0]), np.exp(result.x[1]), np.exp(result.x[2]), np.exp(result.x[3]))
-#best = (np.exp(result[0]), np.exp(result[1]), np.exp(result[2]), np.exp(result[3]))
-#best = (np.exp(result[0]), np.exp(result[1]), 0, 0)
-#best = np.exp(result)
 best = (np.exp(result[0][0]), np.exp(result[0][1]), np.exp(result[0][2]), np.exp(result[0][3]))
-#best = (np.exp(result.x[0]), np.exp(result.x[1]), np.exp(result.x[2]), np.exp(result.x[3]))
+
 plt.figure("results according to the learned hyperparameters")
 mu_test, var_test = gp_predictive_distribution(x_train, x_test, t_train, beta, best)
 log_like = gp_log_likelihood(x_train, t_train, best)
 log_likelihood_all.append(log_like)
-iterations.append(i)
-#print 'log-likelihood according to each iteration: ' +str(log_likelihood_all)
 label = 'learned'
 gp_plot(x_test, y_test, mu_test, var_test, x_train, t_train, best, beta, log_like, label)
 plt.legend(loc = 2, prop = {'size': 6})
 plt.xlim(-1,1)
-plt.ylim(-2,2)
 
 plt.figure('log-likelihood after each iteration')
 plt.plot(log_likelihood_all)
